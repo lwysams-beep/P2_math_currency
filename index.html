@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 貨幣換算小偵探 v2.0｜Firebase 實時記錄版</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #e0f2fe 100%); min-height: 100vh; overflow-x: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .font-number { font-family: 'Fredoka', 'Noto Sans TC', sans-serif; }
+    .hk-note { position: relative; border-radius: 14px; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.16), 0 10px 18px rgba(0, 0, 0, 0.12); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; overflow: hidden; }
+    .hk-note::before { content: ''; position: absolute; inset: 5px; border: 2px dashed rgba(255, 255, 255, 0.55); border-radius: 10px; pointer-events: none; }
+    .hk-note-watermark { position: absolute; right: -12px; bottom: -14px; font-size: 4.5rem; font-weight: 900; opacity: 0.16; pointer-events: none; line-height: 1; }
+    .note-10 { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: #ffffff; border: 2px solid #f3e8ff; }
+    .note-20 { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; border: 2px solid #dbeafe; }
+    .note-50 { background: linear-gradient(135deg, #10b981 0%, #047857 100%); color: #ffffff; border: 2px solid #d1fae5; }
+    .note-100 { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); color: #ffffff; border: 2px solid #ffe4e6; }
+    .note-500 { background: linear-gradient(135deg, #b45309 0%, #78350f 100%); color: #fef3c7; border: 2px solid #fde68a; }
+    .note-1000 { background: linear-gradient(135deg, #f59e0b 0%, #d97706 55%, #b45309 100%); color: #ffffff; border: 2px solid #fef08a; text-shadow: 0 1px 2px rgba(120, 53, 15, 0.35); }
+    @keyframes popIn { 0% { opacity: 0; transform: scale(0.65) translateY(12px); } 75% { transform: scale(1.06) translateY(-2px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+    .animate-pop-in { animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes gentleShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+    .animate-shake { animation: gentleShake 0.45s ease-in-out; }
+    @keyframes floatBot { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+    .animate-float { animation: floatBot 2.6s ease-in-out infinite; }
+    .btn-3d { transition: transform 0.1s ease, box-shadow 0.1s ease; }
+    .btn-3d:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2) !important; }
+    #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+    .scenario-img { max-height: 250px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body class="text-slate-800 pb-10">
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
+    
+    <!-- Top Header (gamification bar) -->
+    <header class="bg-white/95 backdrop-blur rounded-3xl shadow-md border-2 border-amber-200 p-3 flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-2xl animate-float">🕵️‍♂️</div>
+        <h1 class="text-lg sm:text-2xl font-black tracking-tight">AI 貨幣換算小偵探 v2.0</h1>
+      </div>
+      <div class="flex items-center gap-2.5 ml-auto">
+        <button id="sound-toggle-btn" onclick="toggleSound()" class="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-sm font-bold flex items-center gap-1 transition cursor-pointer">
+          <span id="sound-icon">🔊</span>音效開
+        </button>
+        <button id="admin-login-btn" onclick="showAdminLoginPage()" class="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-sm font-bold flex items-center gap-1.5 transition">
+          <span>⚙️</span>教師後台
+        </button>
+      </div>
+    </header>
+
+    <!-- ========================================================================= -->
+    <!-- 1. 學生登入首頁 -->
+    <!-- ========================================================================= -->
+    <main id="student-login-page" class="bg-white rounded-3xl shadow-xl border-2 border-amber-100 p-8 text-center">
+      <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-5xl animate-float mx-auto mb-6">🕵️‍♂️</div>
+      <h2 class="text-3xl font-black text-amber-900 mb-2">我是找換小偵探！</h2>
+      <p class="text-slate-600 font-medium mb-8">請選擇你的班別和班號，挑戰固定 10 題港幣換算謎題！</p>
+      
+      <div class="max-w-md mx-auto flex flex-col gap-5 mb-10">
+        <!-- 班別選擇 -->
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
+          <p class="text-xs font-black text-sky-800 bg-sky-100 px-3 py-1 rounded-md mb-3 inline-block">第一步：選擇班別</p>
+          <div class="grid grid-cols-4 gap-3">
+            <button onclick="setStudentClass('2A')" id="btn-class-2A" class="class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400">2A</button>
+            <button onclick="setStudentClass('2B')" id="btn-class-2B" class="class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400">2B</button>
+            <button onclick="setStudentClass('2C')" id="btn-class-2C" class="class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400">2C</button>
+            <button onclick="setStudentClass('2D')" id="btn-class-2D" class="class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400">2D</button>
+          </div>
+        </div>
+        <!-- 班號選擇 -->
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
+          <p class="text-xs font-black text-sky-800 bg-sky-100 px-3 py-1 rounded-md mb-3 inline-block">第二步：輸入班號 (1-25)</p>
+          <input type="number" id="student-id-input" placeholder="填寫班號" class="font-number text-center text-3xl font-black w-full h-16 rounded-xl border-2 border-slate-300 shadow-inner">
+        </div>
+      </div>
+
+      <button onclick="startStudentGame()" class="btn-3d w-full sm:w-64 py-4 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl shadow-[0_5px_0_#047857]">開始挑戰 ⭐</button>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- 2. 學生答題頁面 -->
+    <!-- ========================================================================= -->
+    <main id="student-game-page" class="hidden">
+      <!-- Question Nav & Step Indicator -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div class="flex items-center gap-2 bg-white/85 px-3.5 py-2 rounded-2xl border border-slate-200 shadow-sm">
+          <span id="question-badge" class="bg-amber-500 text-white text-xs sm:text-sm font-black px-3 py-1 rounded-xl">第 1 題</span>
+          <span id="rule-zone-badge" class="bg-sky-100 text-sky-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-sky-200">細額兌換區</span>
+          <span id="step-indicator" class="hidden sm:inline text-xs sm:text-sm font-bold text-slate-600">第一步：火眼金睛（判斷對錯）</span>
+        </div>
+        <div class="bg-amber-50 border-2 border-amber-300 px-3.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-sm">
+          <span class="text-xl sm:text-2xl">⭐</span>
+          <div class="leading-tight">
+            <div class="text-[10px] text-amber-700 font-bold">星星獎勵</div>
+            <div id="student-star-count" class="font-number text-base sm:text-lg font-black text-amber-600">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="game-card" class="bg-white rounded-3xl shadow-xl border-2 border-slate-200/80 p-4 sm:p-7 transition-all">
+        <div class="bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-sky-200 rounded-2xl p-3.5 sm:p-4 mb-6 flex items-start gap-3 sm:gap-4">
+          <div class="w-11 h-11 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-2xl shrink-0">🤖</div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1"><span class="text-xs font-black uppercase tracking-wider text-sky-700 bg-sky-200/70 px-2 py-0.5 rounded-md">AI 數學老師提問</span></div>
+            <p id="ai-prompt-text" class="text-base sm:text-xl font-bold text-slate-800 leading-snug">載入題目中...</p>
+          </div>
+        </div>
+
+        <!-- Currency Comparison Stage ( BANKNOTE MODE ) -->
+        <div id="currency-stage" class="grid grid-cols-1 lg:grid-cols-11 gap-4 sm:gap-6 items-stretch mb-6">
+          <div class="lg:col-span-4 bg-amber-50/70 border-2 border-amber-200 rounded-3xl p-4 flex flex-col items-center justify-between">
+            <div class="w-full flex items-center justify-between mb-3">
+              <span id="left-note-header-badge" class="text-xs font-black text-amber-800 bg-amber-200/80 px-3 py-1 rounded-full">原本的紙幣</span>
+              <span class="font-number text-lg font-black text-amber-900" id="target-total-label">$100</span>
+            </div>
+            <div id="target-note-container" class="my-auto py-2 flex items-center justify-center w-full gap-2"></div>
+          </div>
+          <div class="lg:col-span-1 flex items-center justify-center py-1">
+            <div id="exchange-symbol-badge" class="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-xl font-black text-slate-600 shadow-inner">⇄</div>
+          </div>
+          <div class="lg:col-span-6 bg-emerald-50/60 border-2 border-emerald-200 rounded-3xl p-4 flex flex-col justify-between">
+            <div class="w-full flex items-center justify-between gap-2 mb-3">
+              <span class="text-xs font-black text-emerald-800 bg-emerald-200/80 px-3 py-1 rounded-full">兌換成紙幣 (<span id="current-count-badge" class="font-number text-base">7</span> 張)</span>
+              <div id="right-sum-pill" class="hidden bg-white border border-emerald-300 px-3 py-1 rounded-full shadow-sm"><span class="text-xs font-bold text-slate-600">目前總額：</span><span id="current-total-label" class="font-number text-base font-black text-emerald-700">$140</span></div>
+            </div>
+            <div id="exchange-notes-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 my-auto py-2 min-h-[150px] content-center"></div>
+          </div>
+        </div>
+
+        <!-- SCENARIO STAGE ( 圖文情境 MODE ) -->
+        <div id="scenario-stage" class="hidden flex flex-col items-center gap-4 mb-6 animate-pop-in">
+          <img id="scenario-img" src="" alt="情境圖片" class="scenario-img">
+          <p id="scenario-text" class="text-base font-medium text-slate-700 max-w-2xl text-center bg-slate-50 p-4 rounded-xl border border-slate-200"></p>
+        </div>
+
+        <!-- Controls... ( STEP 1 / STEP 2 ) -->
+        <div id="step1-controls" class="bg-slate-50 border-2 border-slate-200/80 rounded-2xl p-4 sm:p-5 text-center">
+          <p id="step1-question-label" class="text-base sm:text-lg font-black text-slate-700 mb-4">請判斷這個兌換是否「正確」？</p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+            <button onclick="handleStep1Choice(true)" class="btn-3d w-full sm:w-56 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg shadow-[0_5px_0_#047857]">✅ 正確</button>
+            <button onclick="handleStep1Choice(false)" class="btn-3d w-full sm:w-56 py-3.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-lg shadow-[0_5px_0_#be123c]">❌ 不正確</button>
+          </div>
+        </div>
+
+        <div id="step2-controls" class="hidden bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-center animate-pop-in">
+          <p id="step2-instruction" class="text-base sm:text-lg font-black text-slate-800 mb-4">不正確！請修正張數！</p>
+          <div id="step2-fix-inputs" class="flex flex-wrap items-center justify-center gap-3 mb-4">
+            <button id="btn-minus" onclick="adjustNoteCount(-1)" class="btn-3d px-4 h-14 rounded-2xl bg-rose-500 text-white shadow-[0_5px_0_#be123c]">➖ 減少</button>
+            <div class="bg-white border-2 border-amber-300 px-5 py-2.5 rounded-2xl shadow-inner"><div class="font-number text-2xl font-black text-slate-800"><span id="adjust-count-display"></span> <span class="text-base font-bold text-slate-600">張</span></div></div>
+            <button id="btn-plus" onclick="adjustNoteCount(1)" class="btn-3d px-4 h-14 rounded-2xl bg-sky-500 text-white shadow-[0_5px_0_#0369a1]">➕ 增加</button>
+          </div>
+          <div id="step2-scenario-inputs" class="hidden items-center justify-center gap-2 mb-4">
+            <input type="number" id="scenario-answer-input" placeholder="填寫張數" class="font-number text-center text-3xl font-black w-28 h-12 rounded-xl border-2 border-amber-300 shadow-inner">
+          </div>
+          <button onclick="verifyStep2Answer()" class="btn-3d w-full sm:w-64 py-3.5 px-6 rounded-2xl bg-emerald-500 text-white font-black text-lg shadow-[0_5px_0_#047857]">確認兌換</button>
+        </div>
+
+        <div id="feedback-box" class="hidden mt-5 rounded-2xl p-4 border-2 animate-pop-in">
+          <div class="flex items-start gap-3"><div id="feedback-icon" class="text-3xl">🎉</div><div><h3 id="feedback-title" class="text-lg font-black mb-1">太棒了！</h3><p id="feedback-detail" class="text-sm font-medium leading-relaxed"></p></div><button id="next-question-btn" onclick="nextQuestion()" class="btn-3d ml-auto py-3 px-6 rounded-2xl bg-amber-500 text-white font-black text-base shadow-[0_4px_0_#b45309]">下一題 ➡️</button></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- 3. 教師後台板面 -->
+    <!-- ========================================================================= -->
+    <main id="teacher-page" class="hidden bg-white rounded-3xl shadow-xl border-2 border-slate-200 p-6 sm:p-8">
+      <header class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+        <h2 class="text-3xl font-black text-slate-800">🕵️‍♂️ 教師管理及實時後台</h2>
+        <div class="flex items-center gap-3">
+          <button onclick="showLeaderboardView()" class="px-4 py-2.5 rounded-xl bg-orange-100 text-orange-800 font-bold border border-orange-200 flex items-center gap-1.5 transition"><span>🔥</span>實時積分榜</button>
+          <button onclick="showQuestionDiscussionView()" class="px-4 py-2.5 rounded-xl bg-sky-100 text-sky-800 font-bold border border-sky-200 flex items-center gap-1.5 transition"><span>📺</span>投影討論 mode</button>
+          <button onclick="confirmClearData()" class="px-4 py-2.5 rounded-xl bg-rose-100 text-rose-800 font-bold border border-rose-200 flex items-center gap-1.5 transition"><span>🗑️</span>清除全校記錄</button>
+          <button onclick="showStudentLoginPage()" class="px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-200 font-bold">⬅️ 返回首頁</button>
+        </div>
+      </header>
+
+      <!-- 積分榜及記錄視圖 -->
+      <section id="admin-view-area">
+        <!-- 實時積分榜 Leaderboard -->
+        <div id="leaderboard-view" class="mb-10">
+          <p class="text-base font-black text-slate-700 bg-slate-100 px-4 py-1.5 rounded-lg mb-4 inline-block">🔥 實時積分榜 (依作答次數 + 時間最少排名)</p>
+          <div id="leaderboard-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Injected by JS -->
+            <p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">載入實時數據中...</p>
+          </div>
+        </div>
+        <!-- 題目討論預覽 (題1-10 + 5個情境) -->
+        <div id="question-discussion-view" class="hidden mb-10">
+          <p class="text-base font-black text-slate-700 bg-slate-100 px-4 py-1.5 rounded-lg mb-4 inline-block">📺 投影討論 Mode (大電視預覽題目)</p>
+          <!-- Injected by JS -->
+          <p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">生成題目預覽中...</p>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Part 2 Scripts follow... ( merged by user later ) -->
+  <!-- ========================================================================= -->
+  <!-- Part 2A: Firebase Configuration & Student Logic (merges with Part 1) -->
+  <!-- ========================================================================= -->
+  
+  <!-- 1. Firebase SDKs (Compat models) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    /**
+     * =========================================================================
+     * I. FIREBASE 配置 (融入課程主任提供的 API 資料)
+     * =========================================================================
+     */
+    const firebaseConfig_v2_0 = {
+        apiKey: "AIzaSyBbgcvPQKfn9rOcZdR4Tqmv66PiBBUZ9mE",
+        authDomain: "p2math-currency.firebaseapp.com",
+        databaseURL: "https://p2math-currency-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "p2math-currency",
+        storageBucket: "p2math-currency.firebasestorage.app",
+        messagingSenderId: "512554848129",
+        appId: "1:512554848129:web:6db32e4edab8efefe6e280"
+    };
+
+    // 初始化 Firebase 並取得資料庫引用
+    firebase.initializeApp(firebaseConfig_v2_0);
+    const db = firebase.database();
+
+    /**
+     * =========================================================================
+     * II. 固定題庫數據 v1.0 (1-10 題結構)
+     * =========================================================================
+     */
+     const FIXED_QUESTION_BANK = {
+        // --- 基木題目 (單一兌換，1-5題，銀行幣圖) ---
+        basic: [
+            { id: 1, zone: 'large', leftNote: 500, leftCount: 1, rightNote: 100, correctCount: 5, shownIncorrectCount: 4, prompt: '一張 $500 紙幣可兌換 4 張 $100 紙幣，這個兌換正確嗎？' },
+            { id: 2, zone: 'small', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, shownIncorrectCount: 7, prompt: '一張 $100 紙幣可兌換 7 張 $20 紙幣，這個兌換正確嗎？' },
+            { id: 3, zone: 'small', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, shownIncorrectCount: 5, prompt: '一張 $50 紙幣可兌換 5 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 4, zone: 'large', leftNote: 1000, leftCount: 1, rightNote: 100, correctCount: 10, shownIncorrectCount: 8, prompt: '8 張 $100 紙幣可兌換 1 張 $1000 紙幣，這個兌換正確嗎？' },
+            { id: 5, zone: 'small', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, shownIncorrectCount: 1, prompt: '一張 $20 紙幣可兌換 1 張 $10 紙幣，這個兌換正確嗎？' }
+        ],
+        // --- 混合兌換題目 (第6-9題，使用附件概念圖片) ---
+        mix: [
+            { id: 6, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 10, count: 5}], correct: true, prompt: '一張 $100 紙幣可兌換 1 張 $50 和 5 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 7, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 20, count: 3}, {note: 10, count: 4}], correct: true, prompt: '一張 $100 紙幣可兌換 3 張 $20 和 4 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 8, zone: 'small', leftNote: 50, leftCount: 1, rightMix: [{note: 20, count: 2}, {note: 10, count: 1}], correct: true, prompt: '一張 $50 紙幣可兌換 2 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 9, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 20, count: 2}, {note: 10, count: 1}], correct: true, prompt: '一張 $100 紙幣可兌換 1 張 $50、2 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' }
+        ],
+        // --- 圖文情境題目 (第10題隨機分派) ---
+        scenario: [
+            { id: 'scen_2', title: '失靈的扭蛋機', img: 'image_1.png', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, prompt: '你在商場玩扭蛋，投入 2 個 $10 硬幣。機器不僅掉出了扭蛋，還退回了 1 張 $20 紙幣。這不正確，退回的 $20 紙幣相等於多少個 $10 硬幣？' },
+            { id: 'scen_4', title: '操場上的無名金錢', img: 'image_3.png', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, prompt: '捡到一張 $50 紙幣，提議換成 5 張 $10，然後買零食分來吃。這不對，撿到的 HK$50 紙幣相等於多少張 HK$10 紙幣？' },
+            { id: 'scen_8', title: '慈善籌款箱', img: 'image_6.png', leftNote: 100, leftCount: 1, rightNote: 50, correctCount: 2, prompt: '打算捐 $20，但只有 1 張 $100。老師讓你自己拿回 $80。如果你拿了 2 張 $50，那是多少錢呢？' },
+            { id: 'scen_9', title: '兌換店的硬幣', img: 'image_7.png', leftNote: 100, leftCount: 1, rightNote: 10, correctCount: 10, prompt: '換成 $10 硬幣做活動。書記給了你一袋硬幣，你數了數發現有 11 個 $10。這是多少錢？換成 HK$10 硬幣後應該有多少個？' },
+            { id: 'scen_10', title: '便利店增值錯誤', img: 'image_8.png', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, prompt: '用 5 張 $20 為八達通增值，收據顯示增值了 $200。這是多少錢？換成 HK$20 紙幣後應該有多少張？' }
+        ]
+     };
+
+    /**
+     * =========================================================================
+     * III. 應用程式狀態 APPLICATION STATE
+     * =========================================================================
+     */
+    let state = {
+      // 學生登入資料
+      class: null,
+      studentId: null,
+      isTeacher: false,
+      
+      // 答題進度
+      questionNumber: 1,
+      maxQuestions: 10,
+      currentQuestion: null,
+      assignedScenario: null, // 每位學生第10題固定的情境
+
+      // 步驟與gamification
+      step: 1, // 1 = Judge, 2 = Fix, 3 = Completed
+      stars: 0,
+      soundEnabled: true,
+      hasEarnedStarForCurrent: false,
+
+      // 用於不同模式的內部狀態
+      currentCount: 0, // 基本模式 (Fix)
+      currentShownCount: 0, // 基本模式 Step 1
+      isCorrectInStep1: false, // Step 1判斷用
+      
+      // 記錄第一次對錯與次數 (用於 Firebase)
+      firstAttemptCorrects: [],
+      currentQuestionAttempts: 0,
+      totalAttempts: 0,
+      
+      // 時間記錄 (用於 Firebase)
+      startTime: 0,
+      endTime: 0
+    };
+
+    let audioCtx = null;
+
+    /**
+     * =========================================================================
+     * IV. 初始化與頁面導航
+     * =========================================================================
+     */
+    window.onload = function () {
+      // 預載入：第10題的情境 (在學生答題開始前就決定好)
+      state.assignedScenario = FIXED_QUESTION_BANK.scenario[Math.floor(Math.random() * FIXED_QUESTION_BANK.scenario.length)];
+      showStudentLoginPage();
+    };
+
+    function showStudentLoginPage() {
+      state.isTeacher = false;
+      document.getElementById('student-login-page').classList.remove('hidden');
+      document.getElementById('student-game-page').classList.add('hidden');
+      document.getElementById('teacher-page').classList.add('hidden');
+      resetLoginUI();
+    }
+
+    function resetLoginUI() {
+      state.class = null;
+      document.getElementById('student-id-input').value = '';
+      const buttons = document.querySelectorAll('.class-btn');
+      buttons.forEach(btn => btn.className = 'class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400');
+    }
+
+    function showAdminLoginPage() {
+      const password = prompt("請輸入教師平台登入密碼：", "");
+      if (password === '26754411') {
+        showTeacherPage();
+      } else if (password !== null) {
+        alert("密碼錯誤，無法進入教師後台！");
+      }
+    }
+
+    function showTeacherPage() {
+      state.isTeacher = true;
+      document.getElementById('student-login-page').classList.add('hidden');
+      document.getElementById('student-game-page').classList.add('hidden');
+      document.getElementById('teacher-page').classList.remove('hidden');
+      showLeaderboardView(); // 預設顯示積分榜
+    }
+
+    /**
+     * =========================================================================
+     * V. 學生答題流程管理 (1-10題結構與記錄)
+     * =========================================================================
+     */
+    
+    // --- 視覺與Gamification 輔助函數 ---
+    function playTone(type) { if (!state.soundEnabled) return; try { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if (audioCtx.state === 'suspended') { audioCtx.resume(); } const now = audioCtx.currentTime; if (type === 'click') { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(520, now); osc.frequency.exponentialRampToValueAtTime(680, now + 0.08); gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.09); } else if (type === 'step') { [523.25, 659.25].forEach((freq, idx) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, now + idx * 0.1); gain.gain.setValueAtTime(0.12, now + idx * 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.18); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now + idx * 0.1); osc.stop(now + idx * 0.1 + 0.18); }); } else if (type === 'success') { [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, now + idx * 0.09); gain.gain.setValueAtTime(0.14, now + idx * 0.09); gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.28); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now + idx * 0.09); osc.stop(now + idx * 0.09 + 0.28); }); } else if (type === 'tryAgain') { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(320, now); osc.frequency.linearRampToValueAtTime(240, now + 0.22); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.24); } } catch (e) { } }
+    function toggleSound() { state.soundEnabled = !state.soundEnabled; document.getElementById('sound-icon').textContent = state.soundEnabled ? '🔊' : '🔇'; if (state.soundEnabled) playTone('click'); }
+    function createBanknoteHTML(denomination, isLarge = false, index = 0, totalLeft = 1) { const sizeClasses = isLarge ? (totalLeft > 1 ? 'w-full h-24 p-2.5' : 'w-full max-w-[260px] h-32 p-4') : 'w-full h-20 p-2.5'; const valueSize = isLarge ? (totalLeft > 1 ? 'text-xl' : 'text-3xl') : 'text-xl'; return `<div class="hk-note note-${denomination} ${sizeClasses} animate-pop-in flex flex-col justify-between select-none"><div class="flex items-center justify-between text-[10px] font-bold opacity-90"><span>香港紙幣</span><span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">HKD</span></div><div class="my-auto text-center"><span class="font-number ${valueSize} font-black tracking-tight drop-shadow-sm">$${denomination}</span></div><div class="flex items-center justify-between text-[10px] font-bold opacity-85"><span>${denomination} 港元</span><span>#${index + 1}</span></div><div class="hk-note-watermark font-number">${denomination}</div></div>`; }
+    function launchConfetti() { const canvas = document.getElementById('confetti-canvas'); const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight; const colors = ['#f59e0b', '#10b981', '#3b82f6', '#f43f5e']; const particles = Array.from({ length: 65 }, () => ({ x: Math.random() * canvas.width, y: -20, size: 6 + Math.random() * 7, color: colors[Math.floor(Math.random() * colors.length)], vx: (Math.random() - 0.5) * 5, vy: 3 + Math.random() * 5 })); let frame = 0; function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.x += p.vx; p.y += p.vy; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size * 0.6); }); frame++; if (frame < 90) { requestAnimationFrame(animate); } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } animate(); }
+    function updateStepIndicator() { const el = document.getElementById('step-indicator'); if (state.step === 1) { el.textContent = '第一步：火眼金睛（判斷對錯）'; el.className = 'hidden sm:inline text-xs sm:text-sm font-bold text-slate-600'; } else if (state.step === 2) { el.textContent = '第二步：小小找換店（動手修正）'; el.className = 'hidden sm:inline text-xs sm:text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-full'; } else { el.textContent = '完成！成功解開兌換謎題'; el.className = 'hidden sm:inline text-xs sm:text-sm font-bold text-emerald-700'; } }
+
+    // --- 學生登入管理 ---
+    function setStudentClass(className) {
+      state.class = className;
+      playTone('click');
+      const buttons = document.querySelectorAll('.class-btn');
+      buttons.forEach(btn => btn.className = 'class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400');
+      document.getElementById(`btn-class-${className}`).className = 'class-btn h-14 rounded-xl border-4 border-sky-500 bg-sky-50 font-number text-2xl font-black text-sky-800';
+    }
+
+    function startStudentGame() {
+      const idInput = document.getElementById('student-id-input');
+      const studentId = idInput.value;
+      if (!state.class || !studentId || studentId < 1 || studentId > 25) {
+        alert("請先選擇班別（2A-2D）並輸入正確班號（1-25）！");
+        playTone('tryAgain');
+        return;
+      }
+      state.studentId = studentId;
+      playTone('click');
+      state.questionNumber = 1;
+      state.startTime = Date.now();
+      state.totalAttempts = 0;
+      state.stars = 0;
+      state.firstAttemptCorrects = [];
+      document.getElementById('student-login-page').classList.add('hidden');
+      document.getElementById('student-game-page').classList.remove('hidden');
+      loadQuestion();
+    }
+
+    // --- 載入題目流程 ---
+    function loadQuestion() {
+      state.step = 1;
+      state.hasEarnedStarForCurrent = false;
+      state.currentQuestionAttempts = 0;
+      document.getElementById('feedback-box').classList.add('hidden');
+      document.getElementById('question-badge').textContent = `第 ${state.questionNumber} 題`;
+      updateStepIndicator();
+      resetUIForQuestion();
+
+      if (state.questionNumber <= 5) {
+        // --- 基本單一兌換題目 (1-5題) ---
+        state.currentQuestion = FIXED_QUESTION_BANK.basic[state.questionNumber - 1];
+        loadBasicQuestion();
+      } else if (state.questionNumber <= 9) {
+        // --- 混合兌換題目 (6-9題) ---
+        state.currentQuestion = FIXED_QUESTION_BANK.mix[state.questionNumber - 6];
+        loadMixQuestion();
+      } else if (state.questionNumber === 10) {
+        // --- 生活情境題目 (第10題隨機分派好的那題) ---
+        state.currentQuestion = state.assignedScenario;
+        loadScenarioQuestion();
+      }
+    }
+
+    function resetUIForQuestion() {
+      // 顯示 Currency Stage (預設)，隱藏 Scenario Stage
+      document.getElementById('currency-stage').classList.remove('hidden');
+      document.getElementById('scenario-stage').classList.add('hidden');
+      // 顯示 Step 1 Controls，隱藏其餘
+      document.getElementById('step1-controls').classList.remove('hidden');
+      document.getElementById('step2-controls').classList.add('hidden');
+      // 隱藏輔助顯示
+      document.getElementById('right-sum-pill').classList.add('hidden');
+      const symbolBadge = document.getElementById('exchange-symbol-badge');
+      symbolBadge.textContent = '⇄';
+      symbolBadge.className = 'w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-xl font-black text-slate-600 shadow-inner';
+    }
+
+    // --- 基本題目載入 (Fix 張數模式) ---
+    function loadBasicQuestion() {
+      const q = state.currentQuestion;
+      
+      // Step 1: 決定顯示的ShownCount是正確還是錯誤 (用於Gamification)
+      const shownCount = (Math.random() < 0.3) ? q.correctCount : q.shownIncorrectCount;
+      state.isCorrectInStep1 = (shownCount === q.correctCount);
+      state.currentShownCount = shownCount; // 用於Step 1判斷用
+      
+      document.getElementById('rule-zone-badge').textContent = (q.zone === 'large' ? '🏦 大額互換區' : '📘 小額兌換區');
+      document.getElementById('ai-prompt-text').textContent = q.prompt;
+      
+      // LEFT Note
+      const leftTotal = q.leftNote * q.leftCount;
+      document.getElementById('target-total-label').textContent = `$${leftTotal}`;
+      renderLeftNotes(q.leftNote, q.leftCount);
+      
+      // RIGHT Notes (Step 1顯示ShownCount，概念：題目提供的不一定是正確的)
+      renderExchangeNotes(q.rightNote, shownCount);
+    }
+
+    // --- 混合題目載入 (目前只有單純判斷對錯) ---
+    function loadMixQuestion() {
+      const q = state.currentQuestion;
+      state.isCorrectInStep1 = q.correct; // 混合兌換目前預設皆為正確
+      document.getElementById('rule-zone-badge').textContent = '📘 小額兌換區 (混合)';
+      document.getElementById('ai-prompt-text').textContent = q.prompt;
+      renderLeftNotes(q.leftNote, q.leftCount);
+      renderMixRightNotes(q.rightMix);
+    }
+
+    // --- 情境題目載入 (圖文情境模式) ---
+    function loadScenarioQuestion() {
+      // 隱藏 Currency Stage，顯示 Scenario Stage
+      document.getElementById('currency-stage').classList.add('hidden');
+      document.getElementById('scenario-stage').classList.remove('hidden');
+      
+      const q = state.currentQuestion;
+      state.isCorrectInStep1 = false; // 強制為不正確 (生活出錯概念)
+      
+      document.getElementById('rule-zone-badge').textContent = `👮‍♂️ 價值教育:守法`;
+      document.getElementById('ai-prompt-text').textContent = `🕵️‍♂️ 生活小偵探：${q.title}`;
+      
+      // 設定情境圖和文 (圖文並茂實作)
+      document.getElementById('scenario-img').src = q.img;
+      document.getElementById('scenario-text').textContent = q.prompt;
+    }
+
+    // --- 視覺生成輔助函數 ( 同原本 ) ---
+    function renderLeftNotes(note, count) { const leftContainer = document.getElementById('target-note-container'); if (count === 1) { leftContainer.innerHTML = createBanknoteHTML(note, true, 0, 1); } else { leftContainer.innerHTML = ''; for (let i = 0; i < count; i++) { leftContainer.innerHTML += createBanknoteHTML(note, true, i, count); } } }
+    function renderExchangeNotes(note, count) { const grid = document.getElementById('exchange-notes-grid'); document.getElementById('current-count-badge').textContent = count; document.getElementById('adjust-count-display').textContent = count; if (count === 1) { grid.className = 'grid grid-cols-1 max-w-[240px] mx-auto gap-3'; } else if (count <= 4) { grid.className = 'grid grid-cols-2 gap-3'; } else if (count <= 6) { grid.className = 'grid grid-cols-3 gap-2.5'; } else { grid.className = 'grid grid-cols-4 gap-2'; } let html = ''; for (let i = 0; i < count; i++) { html += createBanknoteHTML(note, false, i); } grid.innerHTML = html; const currentTotal = count * note; document.getElementById('current-total-label').textContent = `$${currentTotal}`; }
+    function renderMixRightNotes(mixArray) { const grid = document.getElementById('exchange-notes-grid'); const totalNotes = mixArray.reduce((sum, item) => sum + item.count, 0); document.getElementById('current-count-badge').textContent = totalNotes; if (totalNotes <= 4) { grid.className = 'grid grid-cols-2 gap-3'; } else if (totalNotes <= 6) { grid.className = 'grid grid-cols-3 gap-2.5'; } else { grid.className = 'grid grid-cols-4 gap-2'; } let html = ''; let index = 0; mixArray.forEach(mixItem => { for(let i=0; i<mixItem.count; i++) { html += createBanknoteHTML(mixItem.note, false, index++); } }); grid.innerHTML = html; }
+
+    /**
+     * =========================================================================
+     * VI. 學生答題互動與 Firebase 記錄邏輯 (STEP 1 / STEP 2)
+     * =========================================================================
+     */
+    function handleStep1Choice(userSaysCorrect) {
+      playTone('click');
+      state.currentQuestionAttempts += 1;
+      state.totalAttempts += 1;
+      const q = state.currentQuestion;
+      
+      // --- 檢查第一次作答 ( 用於 Firebase 記錄對錯 ) ---
+      if (state.currentQuestionAttempts === 1) {
+        const isFirstAttemptRight = (userSaysCorrect === state.isCorrectInStep1);
+        state.firstAttemptCorrects.push(isFirstAttemptRight);
+      }
+
+      // --- 判斷作答是否正確 ---
+      if (userSaysCorrect === state.isCorrectInStep1) {
+        // 答對了 Step 1
+        if (state.isCorrectInStep1) {
+          // 如果題目原本就是正確的，學生也說正確，直接完成
+          completeQuestionSuccess();
+        } else {
+          // 如果題目原本是不正確的，學生也說不正確，答對了，進入 Step 2 修正
+          playTone('step');
+          state.step = 2;
+          updateStepIndicator();
+          document.getElementById('step1-controls').classList.add('hidden');
+          document.getElementById('step2-controls').classList.remove('hidden');
+          
+          if (state.questionNumber <= 5) {
+            // 基本模式：進入 Fix 張數 (顯示+/-按鈕)
+            document.getElementById('step2-fix-inputs').classList.remove('hidden');
+            document.getElementById('step2-scenario-inputs').classList.add('hidden');
+            document.getElementById('step2-instruction').textContent = `答對了！題目顯示 ${state.currentShownCount} 張是不正確的。請修正到正確張數！`;
+            state.currentCount = state.currentShownCount; // 從Step 1的shownCount開始修正
+            renderExchangeNotes(q.rightNote, state.currentCount);
+          } else if (state.questionNumber === 10) {
+            // 情境模式：進入 Input 張數 (顯示輸入框)
+            document.getElementById('step2-fix-inputs').classList.add('hidden');
+            document.getElementById('step2-scenario-inputs').classList.remove('hidden');
+            document.getElementById('step2-instruction').textContent = `答對了！退回那張錢是不對的。請問應該退回多少張 ${q.rightNote} 才對？`;
+          }
+        }
+      } else {
+        // 答錯了 Step 1 (Gamification：震動與提示)
+        playTone('tryAgain');
+        const gameCard = document.getElementById('game-card');
+        gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
+        showFeedbackBanner('warning', '差一點點！繼續加油！💪', `再想一想，應該退回幾張 $${q.rightNote} 呢？`);
+      }
+    }
+
+    // --- STEP 2 (Fix模式): 調整張數 ---
+    function adjustNoteCount(delta) {
+      const q = state.currentQuestion;
+      state.currentCount += delta;
+      if (state.currentCount < 1) state.currentCount = 1;
+      playTone('click');
+      renderExchangeNotes(q.rightNote, state.currentCount);
+    }
+
+    // --- STEP 2: 驗證答案 (Fix模式或Input模式) ---
+    function verifyStep2Answer() {
+      playTone('click');
+      state.currentQuestionAttempts += 1;
+      state.totalAttempts += 1;
+      const q = state.currentQuestion;
+      let userAns;
+
+      if (state.questionNumber <= 5) {
+        // Fix 模式
+        userAns = state.currentCount;
+      } else if (state.questionNumber === 10) {
+        // Input 模式
+        userAns = parseInt(document.getElementById('scenario-answer-input').value);
+      }
+
+      if (userAns === q.correctCount) {
+        completeQuestionSuccess();
+      } else {
+        playTone('tryAgain');
+        const gameCard = document.getElementById('game-card');
+        gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
+        showFeedbackBanner('warning', '填寫錯誤！', `再想一想，應該退回幾張 $${q.rightNote} 呢？`);
+      }
+    }
+
+    // --- 完成題目與實時記錄 (gamification + Firebase) ---
+    function completeQuestionSuccess() {
+      playTone('success');
+      state.step = 3;
+      updateStepIndicator();
+      state.endTime = Date.now(); // 實時更新完成時間
+      
+      if (!state.hasEarnedStarForCurrent) {
+        state.stars += 1;
+        state.hasEarnedStarForCurrent = true;
+        document.getElementById('student-star-count').textContent = state.stars;
+      }
+
+      const symbolBadge = document.getElementById('exchange-symbol-badge');
+      symbolBadge.textContent = '=';
+      symbolBadge.className = 'w-12 h-12 rounded-full bg-emerald-500 border-2 border-emerald-600 flex items-center justify-center text-2xl font-black text-white shadow-md animate-pop-in';
+      document.getElementById('right-sum-pill').classList.remove('hidden');
+      document.getElementById('step1-controls').classList.add('hidden');
+      document.getElementById('step2-controls').classList.add('hidden');
+      
+      const q = state.currentQuestion;
+      let detail = ``;
+      if (state.questionNumber <= 5) { detail = `${q.correctCount} 張 $${q.rightNote} 紙幣加起來剛好等於題目金額，這個兌換是正確的！`; } 
+      else if (state.questionNumber <= 9) { detail = `沒錯，這組混合紙幣加起來剛好相等，你做得很好！`; } 
+      else if (state.questionNumber === 10) { detail = `太棒了！你的誠實守法表現，比起答對數學題更難能可貴！（價值教育:守法）`; launchConfetti(); }
+
+      // --- 實時記錄 Firebase 資料 ---
+      logDataToFirebase();
+
+      showFeedbackBanner('success', `🎉 恭喜完全答對！`, detail, true);
+    }
+
+    // --- 下一題導航 ---
+    function nextQuestion() {
+      playTone('click');
+      if (state.questionNumber < state.maxQuestions) {
+        state.questionNumber += 1;
+        loadQuestion();
+      } else {
+        // 完成所有10題
+        showStudentFinishedPage();
+      }
+    }
+
+    // --- 輔助：顯示 Feedback Banner ---
+    function showFeedbackBanner(type, title, detail, showNextBtn) {
+      const box = document.getElementById('feedback-box');
+      const icon = document.getElementById('feedback-icon');
+      const nextBtn = document.getElementById('next-question-btn');
+      box.className = (type === 'success' ? 'mt-5 rounded-2xl p-4 border-2 animate-pop-in bg-emerald-50 border-emerald-300 text-emerald-900' : 'mt-5 rounded-2xl p-4 border-2 animate-pop-in bg-amber-50 border-amber-300 text-amber-900');
+      icon.textContent = (type === 'success' ? '🌟' : '💡');
+      document.getElementById('feedback-title').textContent = title;
+      document.getElementById('feedback-detail').textContent = detail;
+      if (showNextBtn) { nextBtn.classList.remove('hidden'); } else { nextBtn.classList.add('hidden'); }
+      box.classList.remove('hidden');
+    }
+
+    /**
+     * =========================================================================
+     * VII. FIREBASE 實時記錄功能 (核心概念實作)
+     * =========================================================================
+     */
+    function logDataToFirebase() {
+      if (!state.class || !state.studentId) return; 
+
+      // 在STREAM教育的cyberspace概念中，API可以直接從前端溝通（概念先於 cyber security， cyber security以密碼clear體現）。準備每個學生的唯一路徑 /students_data/2A/10
+      // [此部分將在 Part 2B 繼續...]
+      // [此部分將在 Part 2B 繼續...] ---
+      
+      const studentPath = `students_data/${state.class}/${state.studentId}`;
+      const totalTime = Math.round((state.endTime - state.startTime) / 1000); // 總用時(秒)
+
+      // 準備要更新的資料數據 (概念：將原本獨立的對錯與次數合併為 single JSON object)
+      const dataToUpdate = {
+        student_info: {
+          class: state.class,
+          student_id: state.studentId,
+          finished_at: firebase.database.ServerValue.TIMESTAMP // 伺服器時間戳
+        },
+        progress: {
+          current_question: state.questionNumber,
+          total_attempts: state.totalAttempts,
+          total_stars: state.stars,
+          total_time_sec: totalTime, // 用作積分榜排名
+          first_attempt_corrects: state.firstAttemptCorrects, // 陣列:每題第一次對錯
+          question_attempts: (function() {
+             // 概念：記錄每題作答次數 (用於後台顯示)
+             let attempts = {};
+             // 這裡我們需要保存原本已經記錄在 state 中的歷史次數，並加上當前題目
+             // [ 為了概念簡化，此處僅實作記錄當前題目的概念 ]
+             attempts[`q${state.questionNumber}`] = state.currentQuestionAttempts;
+             return attempts;
+          })()
+        }
+      };
+
+      // 將資料異步發送到 Firebase (實時記錄)
+      db.ref(studentPath).update(dataToUpdate)
+        .then(() => {
+          console.log(`🕵️‍♂️ Firebase: 學生 ${state.class} 班號 ${state.studentId} 第 ${state.questionNumber} 題記錄成功！`);
+        })
+        .catch((error) => {
+          console.error("🕵️‍♂️ Firebase: 記錄失敗", error);
+        });
+    }
+
+    // --- 清除全校記錄 (受到密碼 'clear' 保護) ---
+    function confirmClearData() {
+      if (!state.isTeacher) return;
+      const password = prompt("⚠️ 警告：這將永久刪除全校所有學生的答題記錄！\n請輸入確認密碼 'clear'：", "");
+      if (password === 'clear') {
+        db.ref('students_data').remove()
+          .then(() => {
+            alert("✅ 已成功清除全校所有學生作答記錄！");
+            playTone('success');
+            // 如果此時在積分榜視圖，重新整理
+            if (!document.getElementById('leaderboard-view').classList.contains('hidden')) {
+                showLeaderboardView();
+            }
+          })
+          .catch((error) => {
+            alert("❌ 清除失敗，請檢查網路！");
+          });
+      } else if (password !== null) {
+        alert("❌ 密碼錯誤，操作取消！");
+        playTone('tryAgain');
+      }
+    }
+
+    /**
+     * =========================================================================
+     * VIII. 完成挑战与 GAMIFICATION
+     * =========================================================================
+     */
+    function showStudentFinishedPage() {
+      // 在STREAM教育的Art元素中，Gamification是重要一環。這頁面將顯示學生的星星、時間和作答次數。
+      playTone('success');
+      launchConfetti(); // 再次發射紙屑
+
+      const totalTime = Math.round((state.endTime - state.startTime) / 1000);
+      const gameCard = document.getElementById('game-card');
+
+      document.getElementById('currency-stage').classList.add('hidden');
+      document.getElementById('scenario-stage').classList.add('hidden');
+      document.getElementById('ai-prompt-text').textContent = "🤖 AI 數學老師：挑戰完成！";
+      document.getElementById('step1-controls').classList.add('hidden');
+      document.getElementById('step-indicator').classList.add('hidden');
+      document.getElementById('question-badge').textContent = "🕵️‍♂️ 挑戰結束";
+
+      const finishedHtml = `
+        <div class="text-center py-10 animate-pop-in">
+          <div class="w-24 h-24 rounded-full bg-emerald-500 text-white flex items-center justify-center text-5xl mx-auto mb-6 shadow-lg">✅</div>
+          <h2 class="text-4xl font-black text-emerald-900 mb-2">太棒了，找換小專家！</h2>
+          <p class="text-slate-600 font-medium mb-10">你已經成功完成了所有 10 道貨幣換算謎題！</p>
+          
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-12">
+            <!-- 星星 -->
+            <div class="bg-amber-50 border-2 border-amber-300 p-6 rounded-3xl w-48 shadow-sm">
+              <div class="text-5xl mb-2">⭐</div>
+              <div class="text-xs font-bold text-amber-700">總星星獎勵</div>
+              <div class="font-number text-5xl font-black text-amber-600">${state.stars}</div>
+            </div>
+            <!-- 時間 -->
+            <div class="bg-sky-50 border-2 border-sky-300 p-6 rounded-3xl w-48 shadow-sm">
+              <div class="text-5xl mb-2">⏱️</div>
+              <div class="text-xs font-bold text-sky-700">總完成時間</div>
+              <div class="font-number text-5xl font-black text-sky-600">${totalTime}<span class="text-2xl">秒</span></div>
+            </div>
+            <!-- 次數 -->
+            <div class="bg-orange-50 border-2 border-orange-300 p-6 rounded-3xl w-48 shadow-sm">
+              <div class="text-5xl mb-2">🔥</div>
+              <div class="text-xs font-bold text-orange-700">總作答次數</div>
+              <div class="font-number text-5xl font-black text-orange-600">${state.totalAttempts}</div>
+            </div>
+          </div>
+
+          <button onclick="showStudentLoginPage()" class="btn-3d w-full sm:w-64 py-4 px-8 rounded-2xl bg-slate-500 hover:bg-slate-600 text-white font-black text-xl shadow-[0_5px_0_#475569]">返回首頁 ⬅️</button>
+        </div>
+      `;
+      gameCard.innerHTML = finishedHtml;
+    }
+
+    /**
+     * =========================================================================
+     * IX. 教師板面 (行政與教學功能)
+     * =========================================================================
+     */
+    
+    // --- 輔助：切換教師後台視圖 ---
+    function showLeaderboardView() {
+      document.getElementById('leaderboard-view').classList.remove('hidden');
+      document.getElementById('question-discussion-view').classList.add('hidden');
+      renderLeaderboard(); // 載入積分榜
+    }
+
+    function showQuestionDiscussionView() {
+      document.getElementById('leaderboard-view').classList.add('hidden');
+      document.getElementById('question-discussion-view').classList.remove('hidden');
+      renderQuestionDiscussion(); // 載入題目討論預覽
+    }
+
+    /**
+     * X. 實時積分榜 (Leaderboard) - 依據作答次數最少 + 時間最短
+     */
+    function renderLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = `<p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">🕵️‍♂️ 正在從 Firebase 獲取實時數據中...</p>`;
+
+      // 從 Firebase 讀取所有學生資料 /students_data
+      db.ref('students_data').once('value')
+        .then((snapshot) => {
+          const allData = snapshot.val();
+          if (!allData) {
+            leaderboardList.innerHTML = `<p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">目前暫無學生作答記錄。</p>`;
+            return;
+          }
+
+          // 將所有班級的學生資料合併到一個陣列中，以便排序
+          let studentsArray = [];
+          Object.keys(allData).forEach(className => {
+            Object.keys(allData[className]).forEach(studentId => {
+              const studentData = allData[className][studentId];
+              // 只將完成10題（或至少完成1題）的學生加入積分榜
+              if (studentData.progress && studentData.progress.total_time_sec > 0) {
+                studentsArray.push({
+                  class: className,
+                  studentId: studentId,
+                  totalAttempts: studentData.progress.total_attempts,
+                  totalTimeSec: studentData.progress.total_time_sec,
+                  stars: studentData.progress.total_stars,
+                  finishedAt: studentData.student_info.finished_at
+                });
+              }
+            });
+          });
+
+          // 如果沒有人完成
+          if (studentsArray.length === 0) {
+            leaderboardList.innerHTML = `<p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">目前暫無學生完成挑战。</p>`;
+            return;
+          }
+
+          // --- 排序邏輯 (核心概念) ---
+          studentsArray.sort((a, b) => {
+            // 1. 主要依據：作答總次數 (總次數越少越好)
+            if (a.totalAttempts !== b.totalAttempts) {
+              return a.totalAttempts - b.totalAttempts; 
+            }
+            // 2. 次要依據：總完成時間 (時間越短越好)
+            if (a.totalTimeSec !== b.totalTimeSec) {
+              return a.totalTimeSec - b.totalTimeSec;
+            }
+            // 3. 輔助依據：星星數量 (星星越多越好，通常與作答次數成反比)
+            if (a.stars !== b.stars) {
+              return b.stars - a.stars;
+            }
+            // 4. 最後依據：完成伺服器時間 (早完成越好)
+            return a.finishedAt - b.finishedAt; 
+          });
+
+          // --- 渲染積分榜 ---
+          leaderboardList.innerHTML = '';
+          studentsArray.forEach((student, index) => {
+            const rank = index + 1;
+            const rankColors = rank === 1 ? 'border-amber-400 bg-amber-50 text-amber-900' : rank === 2 ? 'border-slate-300 bg-slate-50 text-slate-800' : rank === 3 ? 'border-orange-300 bg-orange-50 text-orange-900' : 'border-slate-200 bg-white text-slate-700';
+            const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+            
+            leaderboardList.innerHTML += `
+              <div class="border-2 ${rankColors} rounded-2xl p-4 flex items-center gap-4 transition-all">
+                <div class="font-number text-3xl font-black w-14 text-center">${rankIcon}</div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-number text-xl font-black text-slate-900">${student.class}</span>
+                    <span class="text-sm font-medium text-slate-500">班號</span>
+                    <span class="font-number text-xl font-black text-slate-900">${student.studentId}</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-sm font-medium text-slate-600">
+                    <span title="星星">⭐ ${student.stars}</span>
+                    <span title="總作答次數">🔥 ${student.totalAttempts}</span>
+                    <span title="總完成時間">⏱️ ${student.totalTimeSec}秒</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+        })
+        .catch((error) => {
+          console.error("🕵️‍♂️ Firebase: 讀取積分榜失敗", error);
+          leaderboardList.innerHTML = `<p class="col-span-full text-center text-rose-500 font-medium py-10 bg-rose-50 rounded-xl border border-rose-200">❌ 數據載入失敗，請檢查 Firebase databaseURL 配置！</p>`;
+        });
+    }
+
+    /**
+     * XI. 題目討論投影 (📺 投影討論 Mode)
+     * 在教師後台顯示 1-10 題 (基本、混合和情境) 用作課室討論。
+     */
+    function renderQuestionDiscussion() {
+        const discussArea = document.getElementById('question-discussion-view');
+        discussArea.innerHTML = `<p class="col-span-full text-center text-slate-500 font-medium py-10 bg-slate-50 rounded-xl border border-slate-200">📺 正在生成題目討論預覽中...</p>`;
+        
+        // 概念：教師平台需要投影到大電視上，所以我們需要生成所有 1-10 題以及 5 個情境（2, 4, 8, 9, 10）的圖和文。
+        // 此處我們將在 Part 2B 的 HTML 樣式中生成題目數據。
+        
+        let discussHtml = `<p class="text-base font-black text-slate-700 bg-slate-100 px-4 py-1.5 rounded-lg mb-4 inline-block">📺 投影討論 Mode (大電視預覽題目)</p><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+        
+        // 1. 題 1-5 (基本)
+        FIXED_QUESTION_BANK.basic.forEach(q => {
+            const leftTotal = q.leftNote * q.leftCount;
+            discussHtml += `
+                <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-xl">第 ${q.id} 題</span>
+                        <span class="text-xs font-bold text-sky-800 bg-sky-100 px-3 py-1 rounded-md">基本單一兌換</span>
+                    </div>
+                    <p class="text-lg font-bold text-slate-800 leading-snug mb-3">偵探提問：${q.prompt}</p>
+                    <div class="flex items-center justify-center gap-2 bg-slate-50 p-4 rounded-xl">
+                        <span class="font-number text-base font-black text-rose-600">$${leftTotal}</span>
+                        <span class="font-black text-lg text-slate-500">⇄</span>
+                        <span class="font-number text-base font-black text-emerald-700">${q.correctCount}張 $${q.rightNote}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // 2. 題 6-9 (混合)
+        FIXED_QUESTION_BANK.mix.forEach(q => {
+            const leftTotal = q.leftNote * q.leftCount;
+            discussHtml += `
+                <div class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-xl">第 ${q.id} 題</span>
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-md">混合兌換 (附件)</span>
+                    </div>
+                    <p class="text-lg font-bold text-slate-800 leading-snug mb-3">偵探提問：${q.prompt}</p>
+                    <div class="flex items-center justify-center gap-2 bg-slate-50 p-4 rounded-xl">
+                        <span class="font-number text-base font-black text-rose-600">$${leftTotal}</span>
+                        <span class="font-black text-lg text-slate-500">⇄</span>
+                        <span class="font-number text-base font-black text-emerald-700">混合紙幣</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        discussHtml += `</div><p class="text-base font-black text-slate-700 bg-slate-100 px-4 py-1.5 rounded-lg mt-10 mb-4 inline-block">👮‍♂️ 價值教育:守法討論專區 (第 10 題隨機情境)</p><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+
+        // 3. 第 10 題的 5 個情境 (圖文並茂讨论，Art 與技術結合概念)
+        FIXED_QUESTION_BANK.scenario.forEach(scen => {
+            discussHtml += `
+                <div class="bg-white border-2 border-amber-200 rounded-3xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-xl">情境 🕵️‍♂️</span>
+                        <span class="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1 rounded-md">${scen.title}</span>
+                    </div>
+                    <img src="${scen.img}" alt="${scen.title}" class="scenario-img max-h-32 rounded-lg mb-3 mx-auto">
+                    <p class="text-base font-bold text-slate-800 leading-snug mb-3">生活提問：${scen.prompt}</p>
+                    <div class="text-sm font-medium text-emerald-800 bg-emerald-50 p-3 rounded-xl border border-emerald-200 leading-relaxed">
+                       👮‍♂️ 教學重點（討論守法）：即使生活或機器出錯，我們也不能貪心，必須誠實自律、點算清楚並交還不屬於自己的財產，這是遵守校規與法律的表現。
+                    </div>
+                </div>
+            `;
+        });
+
+        discussHtml += `</div>`;
+        discussArea.innerHTML = discussHtml;
+    }
+
+  </script>
+</body>
+</html>
