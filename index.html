@@ -533,7 +533,8 @@
     function renderMixRightNotes(mixArray) {
       const grid = document.getElementById('exchange-notes-grid');
       const q = state.currentQuestion;
-      const denominations = [...new Set([...mixArray.map(x => x.note), ...(q.correctMix || []).map(x => x.note)])].sort((a,b) => b-a);
+      // 第6至9題均可使用 $50、$20、$10 三種面額自由組合兌換
+      const denominations = [50, 20, 10];
       grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 my-auto py-2';
       let html = '';
       denominations.forEach(note => {
@@ -609,7 +610,7 @@
           } else if (state.questionNumber >= 6 && state.questionNumber <= 9) {
             document.getElementById('step2-fix-inputs').classList.add('hidden');
             document.getElementById('step2-scenario-inputs').classList.add('hidden');
-            document.getElementById('step2-instruction').textContent = '答對了！請逐種紙幣按「＋／−」，把每種紙幣的張數修正，令總額相等。';
+            document.getElementById('step2-instruction').textContent = `答對了！請自由調整 $50、$20 和 $10 紙幣的張數。只要兌換後的總額等於 $${q.leftNote * q.leftCount}，任何組合都可以！`;
             renderMixRightNotes(q.rightMix);
           }
         }
@@ -673,12 +674,12 @@
         userAns = state.currentCount;
         isAnswerCorrect = (userAns === q.correctCount);
       } else if (state.questionNumber <= 9) {
-        isAnswerCorrect = (q.correctMix || []).every(item =>
-          Number(state.currentMixCounts[item.note] || 0) === item.count
-        ) && Object.keys(state.currentMixCounts).every(note => {
-          const expected = (q.correctMix || []).find(item => item.note === Number(note));
-          return Number(state.currentMixCounts[note] || 0) === (expected ? expected.count : 0);
-        });
+        // 不再要求學生輸入指定的紙幣組合；只要各面額總值等於左方金額便算正確
+        const targetValue = Number(q.leftNote) * Number(q.leftCount || 1);
+        const exchangedValue = [50, 20, 10].reduce((sum, note) =>
+          sum + note * Number(state.currentMixCounts[note] || 0), 0
+        );
+        isAnswerCorrect = exchangedValue === targetValue;
       } else if (state.questionNumber === 10) {
         userAns = parseInt(document.getElementById('scenario-answer-input').value, 10);
         isAnswerCorrect = Number.isFinite(userAns) && userAns === q.correctCount;
@@ -693,7 +694,7 @@
         const hint = state.questionNumber <= 5
           ? `再想一想，$${q.leftNote} 應該兌換成多少張 $${q.rightNote} 紙幣？`
           : state.questionNumber <= 9
-            ? '請再檢查每一種面額的紙幣張數，以及加起來的總額。'
+            ? `請再檢查紙幣總值是否等於 $${q.leftNote * q.leftCount}。你可以自由調整 $50、$20 和 $10 紙幣的組合，不一定要跟示範答案相同。`
             : `再計算一次：$${q.leftNote} ÷ $${q.rightNote} 等於多少張？`;
         showFeedbackBanner('warning', '答案未正確！', hint);
       }
