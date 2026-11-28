@@ -63,6 +63,20 @@
 <body class="text-slate-800 pb-10">
   <canvas id="confetti-canvas"></canvas>
 
+  <!-- 教師平台密碼視窗：使用 password 欄位遮蔽輸入 -->
+  <div id="teacher-password-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="teacher-password-title">
+    <div class="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 text-center">
+      <div class="text-4xl mb-3">🔐</div>
+      <h2 id="teacher-password-title" class="text-xl font-black text-slate-800 mb-2">教師平台登入</h2>
+      <p class="text-sm text-slate-500 mb-4">請輸入教師平台密碼</p>
+      <input id="teacher-password-input" type="password" autocomplete="off" placeholder="輸入密碼" class="w-full h-14 text-center text-2xl tracking-widest font-black border-2 border-slate-300 rounded-xl mb-4" onkeydown="if(event.key==='Enter') verifyTeacherPassword()">
+      <div class="flex gap-3">
+        <button type="button" onclick="closeTeacherPasswordModal()" class="flex-1 py-3 rounded-xl bg-slate-200 text-slate-700 font-bold">取消</button>
+        <button type="button" onclick="verifyTeacherPassword()" class="flex-1 py-3 rounded-xl bg-sky-600 text-white font-bold">登入</button>
+      </div>
+    </div>
+  </div>
+
   <div class="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
     
     <!-- Top Header (gamification bar) -->
@@ -300,13 +314,13 @@
             { id: 8, zone: 'small', leftNote: 50, leftCount: 1, rightMix: [{note: 20, count: 1}, {note: 10, count: 1}], correctMix: [{note: 20, count: 2}, {note: 10, count: 1}], isCorrect: false, prompt: '一張 $50 紙幣可兌換 1 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' },
             { id: 9, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 20, count: 1}, {note: 10, count: 1}], correctMix: [{note: 50, count: 1}, {note: 20, count: 2}, {note: 10, count: 1}], isCorrect: false, prompt: '一張 $100 紙幣可兌換 1 張 $50、1 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' }
         ],
-        // --- 圖文情境題目 (第10題隨機分派) ---
+        // --- 圖文情境題目 (第10題隨機分派；三關流程) ---
         scenario: [
-            { id: 'scen_2', title: '失靈的扭蛋機', img: 'images/image_1.png', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, prompt: '你在商場玩扭蛋，投入 2 個 $10 硬幣。機器不僅掉出了扭蛋，還退回了 1 張 $20 紙幣。這不正確，退回的 $20 紙幣相等於多少個 $10 硬幣？' },
-            { id: 'scen_4', title: '操場上的無名金錢', img: 'images/image_3.png', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, prompt: '捡到一張 $50 紙幣，提議換成 5 張 $10，然後買零食分來吃。這不對，撿到的 HK$50 紙幣相等於多少張 HK$10 紙幣？' },
-            { id: 'scen_8', title: '慈善籌款箱', img: 'images/image_6.png', leftNote: 100, leftCount: 1, rightNote: 50, correctCount: 2, prompt: '打算捐 $20，但只有 1 張 $100。老師讓你自己拿回 $80。如果你拿了 2 張 $50，那是多少錢呢？' },
-            { id: 'scen_9', title: '兌換店的硬幣', img: 'images/image_7.png', leftNote: 100, leftCount: 1, rightNote: 10, correctCount: 10, prompt: '換成 $10 硬幣做活動。書記給了你一袋硬幣，你數了數發現有 11 個 $10。這是多少錢？換成 HK$10 硬幣後應該有多少個？' },
-            { id: 'scen_10', title: '便利店增值錯誤', img: 'images/image_8.png', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, prompt: '用 5 張 $20 為八達通增值，收據顯示增值了 $200。這是多少錢？換成 HK$20 紙幣後應該有多少張？' }
+            { id: 'scen_2', title: '失靈的扭蛋機', img: 'images/image_1.png', targetAmount: 20, shownMix: [{note:10,count:1}], valueQuestion: '你認為小明應該怎樣做？', valueOptions: ['A. 立即通知店員，交還多退回的 $20。','B. 把 $20 收起來，當作自己額外得到的零用錢。','C. 不理會故障情況，立即離開。'], valueAnswer: 0, exchangePrompt: '一張 $20 紙幣可以兌換成一個 $10 硬幣。這個兌換正確嗎？', prompt: '小明在商場玩扭蛋，投入了兩個 $10 硬幣。扭蛋機發生故障，除了掉出扭蛋，還額外退回一張 $20 紙幣。', correctCount: 2 },
+            { id: 'scen_4', title: '操場上的無名金錢', img: 'images/image_3.png', targetAmount: 50, shownMix: [{note:10,count:4}], valueQuestion: '小華應該怎樣做？', valueOptions: ['A. 把 $50 帶回家，當作自己的零用錢。','B. 把 $50 交給老師或校務處，協助尋找失主。','C. 把 $50 分給朋友。'], valueAnswer: 1, exchangePrompt: '一張 $50 紙幣可以兌換成四張 $10 紙幣。這個兌換正確嗎？', prompt: '小華在學校操場拾到一張 $50 紙幣，附近沒有看見失主。', correctCount: 5 },
+            { id: 'scen_8', title: '慈善籌款箱', img: 'images/image_6.png', targetAmount: 80, shownMix: [{note:50,count:1},{note:20,count:1}], valueQuestion: '小美應該怎樣處理找續？', valueOptions: ['A. 仔細點算找續，若發現多收或少找，立即通知負責收款的人。','B. 如果對方多找錢，就收下來。','C. 不用點算，拿到錢便離開。'], valueAnswer: 0, exchangePrompt: '$80 可以兌換成一張 $50 和一張 $20 紙幣。這個兌換正確嗎？', prompt: '小美參加學校慈善籌款活動，決定捐出 $20。她交給負責收款的同學一張 $100 紙幣，對方需要找回 $80。', correctCount: 8 },
+            { id: 'scen_9', title: '兌換店的硬幣', img: 'images/image_7.png', targetAmount: 100, shownMix: [{note:10,count:11}], valueQuestion: '小樂應該怎樣做？', valueOptions: ['A. 把多出的 $10 收起來，不告訴店員。','B. 立即告訴店員，並把多出的 $10 交還。','C. 把多出的 $10 送給朋友。'], valueAnswer: 1, exchangePrompt: '一張 $100 紙幣可以兌換成十一個 $10 硬幣。這個兌換正確嗎？', prompt: '小樂到兌換店，把 $100 紙幣兌換成 $10 硬幣。店員不小心多給了一個 $10 硬幣，小樂點算時發現共有十一個。', correctCount: 10 },
+            { id: 'scen_10', title: '便利店八達通增值', img: 'images/image_8.png', targetAmount: 100, shownMix: [{note:20,count:4}], valueQuestion: '小玲應該怎樣做？', valueOptions: ['A. 當作賺到了額外 $100，不用理會。','B. 立即向店員反映，核對收據及交易紀錄。','C. 把收據丟掉，當作沒有發生。'], valueAnswer: 1, exchangePrompt: '一張 $100 紙幣可以兌換成四張 $20 紙幣。這個兌換正確嗎？', prompt: '小玲到便利店用 $100 為八達通增值。完成後，她發現收據顯示增值了 $200，與她實際付出的金額不符。', correctCount: 5 }
         ]
      };
 
@@ -339,6 +353,7 @@
       currentMixCounts: {}, // 混合紙幣逐種面額的張數
       isCorrectInStep1: false, // Step 1判斷用
       valueChoicePassed: false,
+      mixCorrectionWrongAttempts: 0, // 第6-9題：同一題修正答案答錯次數
       
       // 記錄第一次對錯與次數 (用於 Firebase)
       firstAttemptCorrects: [],
@@ -380,11 +395,27 @@
     }
 
     function showAdminLoginPage() {
-      const password = prompt("請輸入教師平台登入密碼：", "");
-      if (password === '26754411') {
+      const modal = document.getElementById('teacher-password-modal');
+      const input = document.getElementById('teacher-password-input');
+      input.value = '';
+      modal.classList.remove('hidden');
+      input.focus();
+    }
+
+    function closeTeacherPasswordModal() {
+      document.getElementById('teacher-password-modal').classList.add('hidden');
+      document.getElementById('teacher-password-input').value = '';
+    }
+
+    function verifyTeacherPassword() {
+      const password = document.getElementById('teacher-password-input').value;
+      if (password === '*') {
+        closeTeacherPasswordModal();
         showTeacherPage();
-      } else if (password !== null) {
-        alert("密碼錯誤，無法進入教師後台！");
+      } else {
+        alert('密碼錯誤，無法進入教師後台！');
+        document.getElementById('teacher-password-input').value = '';
+        document.getElementById('teacher-password-input').focus();
       }
     }
 
@@ -443,6 +474,8 @@
       state.step = 1;
       state.hasEarnedStarForCurrent = false;
       state.currentQuestionAttempts = 0;
+      state.mixCorrectionWrongAttempts = 0;
+      state.valueChoicePassed = false;
       document.getElementById('feedback-box').classList.add('hidden');
       document.getElementById('question-badge').textContent = `第 ${state.questionNumber} 題`;
       updateStepIndicator();
@@ -472,6 +505,8 @@
       document.getElementById('step2-controls').classList.add('hidden');
       // 隱藏輔助顯示
       document.getElementById('right-sum-pill').classList.add('hidden');
+      document.getElementById('left-note-header-badge').textContent = '原本的紙幣';
+      document.getElementById('step1-question-label').textContent = '請判斷這個兌換是否「正確」？';
       const symbolBadge = document.getElementById('exchange-symbol-badge');
       symbolBadge.textContent = '⇄';
       symbolBadge.className = 'w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-xl font-black text-slate-600 shadow-inner';
@@ -514,19 +549,26 @@
 
     // --- 情境題目載入 (圖文情境模式) ---
     function loadScenarioQuestion() {
-      // 隱藏 Currency Stage，顯示 Scenario Stage
+      // 第10題先顯示生活情境及價值判斷；答對後才進入兌換判斷。
       document.getElementById('currency-stage').classList.add('hidden');
       document.getElementById('scenario-stage').classList.remove('hidden');
-      
+      document.getElementById('value-choice-controls').classList.remove('hidden');
+      document.getElementById('step1-controls').classList.add('hidden');
+      document.getElementById('step2-controls').classList.add('hidden');
       const q = state.currentQuestion;
-      state.isCorrectInStep1 = false; // 強制為不正確 (生活出錯概念)
-      
-      document.getElementById('rule-zone-badge').textContent = `👮‍♂️ 價值教育:守法`;
+      state.isCorrectInStep1 = false; // 第10題的兌換判斷全部為「不正確」
+      state.valueChoicePassed = false;
+      document.getElementById('rule-zone-badge').textContent = '👮‍♂️ 價值教育：生活小偵探';
       document.getElementById('ai-prompt-text').textContent = `🕵️‍♂️ 生活小偵探：${q.title}`;
-      
-      // 設定情境圖和文 (圖文並茂實作)
       document.getElementById('scenario-img').src = q.img;
       document.getElementById('scenario-text').textContent = q.prompt;
+      document.getElementById('value-choice-controls').querySelector('p').textContent = `第一關：${q.valueQuestion}`;
+      const choiceButtons = document.querySelectorAll('#value-choice-controls .choice-card');
+      choiceButtons.forEach((button, index) => {
+        button.textContent = q.valueOptions[index];
+        button.disabled = false;
+        button.classList.remove('opacity-50');
+      });
     }
 
     // --- 視覺生成輔助函數 ( 同原本 ) ---
@@ -559,7 +601,7 @@
       const totalValue = denominations.reduce((sum, note) => sum + note * Number(state.currentMixCounts[note] || 0), 0);
       document.getElementById('current-count-badge').textContent = totalNotes;
       document.getElementById('current-total-label').textContent = `$${totalValue}`;
-      document.getElementById('right-sum-pill').classList.remove('hidden');
+      // 目前總額預設保持隱藏；第6-9題同一題修正答錯兩次後才顯示。
       document.getElementById('adjust-count-display').textContent = totalNotes;
     }
 
@@ -609,11 +651,12 @@
             document.getElementById('step2-instruction').textContent = `答對了！題目顯示 ${state.currentShownCount} 張是不正確的。請修正到正確張數！`;
             state.currentCount = state.currentShownCount; // 從Step 1的shownCount開始修正
             renderExchangeNotes(q.rightNote, state.currentCount);
-          } else if (state.questionNumber >= 6 && state.questionNumber <= 9) {
+          } else if ((state.questionNumber >= 6 && state.questionNumber <= 9) || state.questionNumber === 10) {
             document.getElementById('step2-fix-inputs').classList.add('hidden');
             document.getElementById('step2-scenario-inputs').classList.add('hidden');
-            document.getElementById('step2-instruction').textContent = `答對了！請自由調整 $50、$20 和 $10 紙幣的張數。只要兌換後的總額等於 $${q.leftNote * q.leftCount}，任何組合都可以！`;
-            renderMixRightNotes(q.rightMix, true);
+            const targetAmount = state.questionNumber === 10 ? q.targetAmount : q.leftNote * q.leftCount;
+            document.getElementById('step2-instruction').textContent = `答對了！請自由調整 $50、$20 和 $10 紙幣的張數。只要兌換後的總額等於 $${targetAmount}，任何組合都可以！`;
+            renderMixRightNotes(q.rightMix || q.shownMix, true);
           }
         }
       } else {
@@ -621,7 +664,8 @@
         playTone('tryAgain');
         const gameCard = document.getElementById('game-card');
         gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
-        showFeedbackBanner('warning', '差一點點！繼續加油！💪', `再想一想，應該退回幾張 $${q.rightNote} 呢？`);
+        const judgeHint = state.questionNumber <= 5 ? `再想一想，應該兌換成多少張 $${q.rightNote} 紙幣？` : '再仔細檢查題目中的兌換金額，看看兩邊是否相等。';
+        showFeedbackBanner('warning', '差一點點！繼續加油！💪', judgeHint);
       }
     }
 
@@ -630,26 +674,30 @@
       playTone('click');
       state.currentQuestionAttempts += 1;
       state.totalAttempts += 1;
-      if (choiceIndex !== 0) {
+      const q = state.currentQuestion;
+      if (choiceIndex !== q.valueAnswer) {
         playTone('tryAgain');
-        showFeedbackBanner('warning', '再想一想！', '正確做法是誠實處理，立即通知店員，並交還不屬於自己的金錢。請再選一次。', false);
+        showFeedbackBanner('warning', '再想一想！', '請重新閱讀生活情境，選出最誠實、負責任的做法。', false);
         return;
       }
       state.valueChoicePassed = true;
-      state.firstAttemptCorrects.push(state.currentQuestionAttempts === 1);
+      if (state.currentQuestionAttempts === 1) state.firstAttemptCorrects.push(true);
       document.getElementById('value-choice-controls').classList.add('hidden');
       document.getElementById('currency-stage').classList.remove('hidden');
-      document.getElementById('step2-controls').classList.remove('hidden');
-      document.getElementById('step2-fix-inputs').classList.add('hidden');
-      document.getElementById('step2-scenario-inputs').classList.remove('hidden');
-      document.getElementById('step2-scenario-inputs').classList.add('flex');
-      document.getElementById('step2-instruction').textContent = '做得好！現在進行貨幣兌換：請計算相等的紙幣張數。';
-      document.getElementById('scenario-answer-input').value = '';
-      document.getElementById('target-total-label').textContent = `$${state.currentQuestion.leftNote * state.currentQuestion.leftCount}`;
-      document.getElementById('current-count-badge').textContent = '待計算';
-      document.getElementById('current-total-label').textContent = '請計算';
-      document.getElementById('exchange-notes-grid').innerHTML = `<div class="col-span-full text-center text-lg font-black text-emerald-800 bg-white rounded-xl p-5">請計算：$${state.currentQuestion.leftNote} ÷ $${state.currentQuestion.rightNote} = ? 張</div>`;
-      showFeedbackBanner('success', '價值判斷正確！', '你選擇了誠實、守法的做法。現在進入貨幣兌換。', false);
+      document.getElementById('step1-controls').classList.remove('hidden');
+      document.getElementById('step2-controls').classList.add('hidden');
+      document.getElementById('ai-prompt-text').textContent = `第二關：${q.exchangePrompt}`;
+      document.getElementById('left-note-header-badge').textContent = '需要兌換的金額';
+      document.getElementById('target-total-label').textContent = `$${q.targetAmount}`;
+      document.getElementById('target-note-container').innerHTML = `<div class="rounded-2xl border-2 border-amber-300 bg-white px-6 py-5 text-3xl font-black text-amber-800">總額 $${q.targetAmount}</div>`;
+      state.currentMixCounts = {};
+      (q.shownMix || []).forEach(item => { state.currentMixCounts[item.note] = item.count; });
+      renderMixRightNotes(q.shownMix, false);
+      document.getElementById('current-count-badge').textContent = q.shownMix.reduce((sum, item) => sum + item.count, 0);
+      document.getElementById('step1-question-label').textContent = '第二關：請判斷這個兌換是否「正確」？';
+      document.getElementById('step1-controls').classList.remove('hidden');
+      document.getElementById('feedback-box').classList.add('hidden');
+      state.step = 1;
       updateStepIndicator();
     }
 
@@ -675,29 +723,32 @@
       if (state.questionNumber <= 5) {
         userAns = state.currentCount;
         isAnswerCorrect = (userAns === q.correctCount);
-      } else if (state.questionNumber <= 9) {
-        // 不再要求學生輸入指定的紙幣組合；只要各面額總值等於左方金額便算正確
-        const targetValue = Number(q.leftNote) * Number(q.leftCount || 1);
+      } else if (state.questionNumber <= 10) {
+        // 第6-10題均接受不同紙幣組合；只檢查總值是否等於目標金額。
+        const targetValue = state.questionNumber === 10 ? Number(q.targetAmount) : Number(q.leftNote) * Number(q.leftCount || 1);
         const exchangedValue = [50, 20, 10].reduce((sum, note) =>
           sum + note * Number(state.currentMixCounts[note] || 0), 0
         );
         isAnswerCorrect = exchangedValue === targetValue;
-      } else if (state.questionNumber === 10) {
-        userAns = parseInt(document.getElementById('scenario-answer-input').value, 10);
-        isAnswerCorrect = Number.isFinite(userAns) && userAns === q.correctCount;
       }
 
       if (isAnswerCorrect) {
         completeQuestionSuccess();
       } else {
+        if (state.questionNumber >= 6 && state.questionNumber <= 9) {
+          state.mixCorrectionWrongAttempts += 1;
+          if (state.mixCorrectionWrongAttempts >= 2) {
+            document.getElementById('right-sum-pill').classList.remove('hidden');
+          }
+        }
         playTone('tryAgain');
         const gameCard = document.getElementById('game-card');
         gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
         const hint = state.questionNumber <= 5
           ? `再想一想，$${q.leftNote} 應該兌換成多少張 $${q.rightNote} 紙幣？`
-          : state.questionNumber <= 9
-            ? `請再檢查紙幣總值是否等於 $${q.leftNote * q.leftCount}。你可以自由調整 $50、$20 和 $10 紙幣的組合，不一定要跟示範答案相同。`
-            : `再計算一次：$${q.leftNote} ÷ $${q.rightNote} 等於多少張？`;
+          : state.questionNumber <= 10
+            ? `請再檢查紙幣總值是否等於 $${state.questionNumber === 10 ? q.targetAmount : q.leftNote * q.leftCount}。你可以自由調整 $50、$20 和 $10 紙幣的組合，不一定要跟示範答案相同。`
+            : '';
         showFeedbackBanner('warning', '答案未正確！', hint);
       }
     }
@@ -1058,9 +1109,12 @@
                         <span class="text-xs font-black text-emerald-800 bg-emerald-100 px-3 py-1 rounded-md">${scen.title}</span>
                     </div>
                     <img src="${scen.img}" alt="${scen.title}" class="scenario-img max-h-32 rounded-lg mb-3 mx-auto">
-                    <p class="text-base font-bold text-slate-800 leading-snug mb-3">生活提問：${scen.prompt}</p>
+                    <p class="text-base font-bold text-slate-800 leading-snug mb-3">生活情境：${scen.prompt}</p>
+                    <p class="text-sm font-bold text-violet-800 bg-violet-50 p-3 rounded-xl mb-2">第一關：${scen.valueQuestion}</p>
+                    <ul class="text-sm text-slate-700 list-disc pl-5 mb-3">${scen.valueOptions.map(option => `<li>${option}</li>`).join('')}</ul>
+                    <p class="text-sm font-bold text-sky-800 bg-sky-50 p-3 rounded-xl mb-3">第二關：${scen.exchangePrompt}（答案：不正確）</p>
                     <div class="text-sm font-medium text-emerald-800 bg-emerald-50 p-3 rounded-xl border border-emerald-200 leading-relaxed">
-                       👮‍♂️ 教學重點（討論守法）：即使生活或機器出錯，我們也不能貪心，必須誠實自律、點算清楚並交還不屬於自己的財產，這是遵守校規與法律的表現。
+                       第三關：學生須修正兌換，令紙幣總值等於 $${scen.targetAmount}。不同紙幣組合均可接受。教學重點：誠實自律、仔細點算及負責任地處理金錢。
                     </div>
                 </div>
             `;
