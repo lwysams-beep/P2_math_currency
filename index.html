@@ -12,7 +12,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet" />
 
   <style>
-    body { font-family: 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #e0f2fe 100%); min-height: 100vh; overflow-x: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #e0f2fe 100%); min-height: 100vh; min-height: 100dvh; overflow-x: hidden; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    button, select, input { font: inherit; touch-action: manipulation; }
+    button { min-height: 44px; }
+    img { max-width: 100%; height: auto; }
+    #student-login-page, #game-card, #teacher-page { width: 100%; }
+    .scenario-img { display: block; width: auto; max-width: 100%; max-height: min(34vh, 280px); object-fit: contain; }
+    .choice-card { min-height: 76px; touch-action: manipulation; }
+    @media (max-width: 820px) {
+      .max-w-5xl { max-width: 100%; }
+      #student-login-page { padding: clamp(16px, 4vw, 32px) !important; }
+      #student-game-page { width: 100%; }
+      #game-card { padding: clamp(12px, 3vw, 24px) !important; }
+      #currency-stage { grid-template-columns: 1fr !important; }
+      #currency-stage > div { grid-column: 1 / -1 !important; min-width: 0; }
+      #exchange-symbol-badge { transform: rotate(90deg); }
+      #exchange-notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .hk-note { min-width: 0; }
+      #feedback-box > div { flex-wrap: wrap; }
+      #next-question-btn { margin-left: 0; width: 100%; }
+    }
+    @media (orientation: landscape) and (max-height: 600px) {
+      .scenario-img { max-height: 30vh; }
+      #student-game-page .mb-6 { margin-bottom: 12px !important; }
+      #game-card { padding: 12px !important; }
+    }
     .font-number { font-family: 'Fredoka', 'Noto Sans TC', sans-serif; }
     .hk-note { position: relative; border-radius: 14px; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.16), 0 10px 18px rgba(0, 0, 0, 0.12); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; overflow: hidden; }
     .hk-note::before { content: ''; position: absolute; inset: 5px; border: 2px dashed rgba(255, 255, 255, 0.55); border-radius: 10px; pointer-events: none; }
@@ -77,8 +102,15 @@
         </div>
         <!-- 班號選擇 -->
         <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-          <p class="text-xs font-black text-sky-800 bg-sky-100 px-3 py-1 rounded-md mb-3 inline-block">第二步：輸入班號 (1-25)</p>
-          <input type="number" id="student-id-input" placeholder="填寫班號" class="font-number text-center text-3xl font-black w-full h-16 rounded-xl border-2 border-slate-300 shadow-inner">
+          <p class="text-xs font-black text-sky-800 bg-sky-100 px-3 py-1 rounded-md mb-3 inline-block">第二步：選擇班號 (1-25)</p>
+          <select id="student-id-input" aria-label="選擇班號" class="font-number text-center text-2xl font-black w-full h-16 rounded-xl border-2 border-slate-300 shadow-inner bg-white">
+            <option value="">請選擇班號</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+            <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
+            <option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
+            <option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option>
+          </select>
         </div>
       </div>
 
@@ -139,6 +171,18 @@
         <div id="scenario-stage" class="hidden flex flex-col items-center gap-4 mb-6 animate-pop-in">
           <img id="scenario-img" src="" alt="情境圖片" class="scenario-img">
           <p id="scenario-text" class="text-base font-medium text-slate-700 max-w-2xl text-center bg-slate-50 p-4 rounded-xl border border-slate-200"></p>
+        <p class="text-xs text-slate-500 text-center">圖片設定位置：FIXED_QUESTION_BANK.scenario 內各題的 img 欄位</p>
+        </div>
+
+        <!-- 第10題：價值教育三選一，答對後才進入貨幣兌換 -->
+        <div id="value-choice-controls" class="hidden bg-violet-50 border-2 border-violet-300 rounded-2xl p-4 sm:p-5 text-center mb-4">
+          <p class="text-lg sm:text-xl font-black text-violet-900 mb-2">👮‍♀️ 生活小偵探：你應該怎樣做？</p>
+          <p class="text-sm sm:text-base font-bold text-slate-700 mb-4">請選出最誠實、正確的行為。答對後才可以進行貨幣兌換。</p>
+          <div class="grid grid-cols-1 gap-3 max-w-3xl mx-auto">
+            <button class="choice-card rounded-2xl border-2 border-violet-200 bg-white p-4 text-left font-bold text-slate-800 hover:border-emerald-400" onclick="handleValueChoice(0)">A. 立即通知店員，並把多收或多找的款項交還。</button>
+            <button class="choice-card rounded-2xl border-2 border-violet-200 bg-white p-4 text-left font-bold text-slate-800 hover:border-rose-400" onclick="handleValueChoice(1)">B. 當作自己得到的獎賞，收下多出的金錢。</button>
+            <button class="choice-card rounded-2xl border-2 border-violet-200 bg-white p-4 text-left font-bold text-slate-800 hover:border-rose-400" onclick="handleValueChoice(2)">C. 不理會這件事，也不告訴任何人。</button>
+          </div>
         </div>
 
         <!-- Controls... ( STEP 1 / STEP 2 ) -->
@@ -213,6 +257,7 @@
   <!-- 1. Firebase SDKs (Compat models) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- 如日後改用 Firebase Storage，可加入 firebase-storage-compat.js；目前可直接使用 StackBlitz 的 images 資料夾。 -->
 
   <script>
     /**
@@ -242,26 +287,26 @@
      const FIXED_QUESTION_BANK = {
         // --- 基木題目 (單一兌換，1-5題，銀行幣圖) ---
         basic: [
-            { id: 1, zone: 'large', leftNote: 500, leftCount: 1, rightNote: 100, correctCount: 5, shownIncorrectCount: 4, prompt: '一張 $500 紙幣可兌換 4 張 $100 紙幣，這個兌換正確嗎？' },
-            { id: 2, zone: 'small', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, shownIncorrectCount: 7, prompt: '一張 $100 紙幣可兌換 7 張 $20 紙幣，這個兌換正確嗎？' },
-            { id: 3, zone: 'small', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, shownIncorrectCount: 5, prompt: '一張 $50 紙幣可兌換 5 張 $10 紙幣，這個兌換正確嗎？' },
-            { id: 4, zone: 'large', leftNote: 1000, leftCount: 1, rightNote: 100, correctCount: 10, shownIncorrectCount: 8, prompt: '8 張 $100 紙幣可兌換 1 張 $1000 紙幣，這個兌換正確嗎？' },
-            { id: 5, zone: 'small', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, shownIncorrectCount: 1, prompt: '一張 $20 紙幣可兌換 1 張 $10 紙幣，這個兌換正確嗎？' }
+            { id: 1, zone: 'large', leftNote: 500, leftCount: 1, rightNote: 100, correctCount: 5, shownIncorrectCount: 4, isCorrect: true, prompt: '一張 $500 紙幣可兌換 5 張 $100 紙幣，這個兌換正確嗎？' },
+            { id: 2, zone: 'small', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, shownIncorrectCount: 7, isCorrect: false, prompt: '一張 $100 紙幣可兌換 7 張 $20 紙幣，這個兌換正確嗎？' },
+            { id: 3, zone: 'small', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, shownIncorrectCount: 4, isCorrect: true, prompt: '一張 $50 紙幣可兌換 5 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 4, zone: 'large', leftNote: 1000, leftCount: 1, rightNote: 100, correctCount: 10, shownIncorrectCount: 8, isCorrect: false, prompt: '一張 $1000 紙幣可兌換 8 張 $100 紙幣，這個兌換正確嗎？' },
+            { id: 5, zone: 'small', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, shownIncorrectCount: 1, isCorrect: false, prompt: '一張 $20 紙幣可兌換 1 張 $10 紙幣，這個兌換正確嗎？' }
         ],
         // --- 混合兌換題目 (第6-9題，使用附件概念圖片) ---
         mix: [
-            { id: 6, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 10, count: 5}], correct: true, prompt: '一張 $100 紙幣可兌換 1 張 $50 和 5 張 $10 紙幣，這個兌換正確嗎？' },
-            { id: 7, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 20, count: 3}, {note: 10, count: 4}], correct: true, prompt: '一張 $100 紙幣可兌換 3 張 $20 和 4 張 $10 紙幣，這個兌換正確嗎？' },
-            { id: 8, zone: 'small', leftNote: 50, leftCount: 1, rightMix: [{note: 20, count: 2}, {note: 10, count: 1}], correct: true, prompt: '一張 $50 紙幣可兌換 2 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' },
-            { id: 9, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 20, count: 2}, {note: 10, count: 1}], correct: true, prompt: '一張 $100 紙幣可兌換 1 張 $50、2 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' }
+            { id: 6, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 10, count: 5}], correctMix: [{note: 50, count: 1}, {note: 10, count: 5}], isCorrect: true, prompt: '一張 $100 紙幣可兌換 1 張 $50 和 5 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 7, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 20, count: 2}, {note: 10, count: 4}], correctMix: [{note: 20, count: 3}, {note: 10, count: 4}], isCorrect: false, prompt: '一張 $100 紙幣可兌換 2 張 $20 和 4 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 8, zone: 'small', leftNote: 50, leftCount: 1, rightMix: [{note: 20, count: 1}, {note: 10, count: 1}], correctMix: [{note: 20, count: 2}, {note: 10, count: 1}], isCorrect: false, prompt: '一張 $50 紙幣可兌換 1 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' },
+            { id: 9, zone: 'small', leftNote: 100, leftCount: 1, rightMix: [{note: 50, count: 1}, {note: 20, count: 1}, {note: 10, count: 1}], correctMix: [{note: 50, count: 1}, {note: 20, count: 2}, {note: 10, count: 1}], isCorrect: false, prompt: '一張 $100 紙幣可兌換 1 張 $50、1 張 $20 和 1 張 $10 紙幣，這個兌換正確嗎？' }
         ],
         // --- 圖文情境題目 (第10題隨機分派) ---
         scenario: [
-            { id: 'scen_2', title: '失靈的扭蛋機', img: 'image_1.png', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, prompt: '你在商場玩扭蛋，投入 2 個 $10 硬幣。機器不僅掉出了扭蛋，還退回了 1 張 $20 紙幣。這不正確，退回的 $20 紙幣相等於多少個 $10 硬幣？' },
-            { id: 'scen_4', title: '操場上的無名金錢', img: 'image_3.png', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, prompt: '捡到一張 $50 紙幣，提議換成 5 張 $10，然後買零食分來吃。這不對，撿到的 HK$50 紙幣相等於多少張 HK$10 紙幣？' },
-            { id: 'scen_8', title: '慈善籌款箱', img: 'image_6.png', leftNote: 100, leftCount: 1, rightNote: 50, correctCount: 2, prompt: '打算捐 $20，但只有 1 張 $100。老師讓你自己拿回 $80。如果你拿了 2 張 $50，那是多少錢呢？' },
-            { id: 'scen_9', title: '兌換店的硬幣', img: 'image_7.png', leftNote: 100, leftCount: 1, rightNote: 10, correctCount: 10, prompt: '換成 $10 硬幣做活動。書記給了你一袋硬幣，你數了數發現有 11 個 $10。這是多少錢？換成 HK$10 硬幣後應該有多少個？' },
-            { id: 'scen_10', title: '便利店增值錯誤', img: 'image_8.png', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, prompt: '用 5 張 $20 為八達通增值，收據顯示增值了 $200。這是多少錢？換成 HK$20 紙幣後應該有多少張？' }
+            { id: 'scen_2', title: '失靈的扭蛋機', img: 'images/image_1.png', leftNote: 20, leftCount: 1, rightNote: 10, correctCount: 2, prompt: '你在商場玩扭蛋，投入 2 個 $10 硬幣。機器不僅掉出了扭蛋，還退回了 1 張 $20 紙幣。這不正確，退回的 $20 紙幣相等於多少個 $10 硬幣？' },
+            { id: 'scen_4', title: '操場上的無名金錢', img: 'images/image_3.png', leftNote: 50, leftCount: 1, rightNote: 10, correctCount: 5, prompt: '捡到一張 $50 紙幣，提議換成 5 張 $10，然後買零食分來吃。這不對，撿到的 HK$50 紙幣相等於多少張 HK$10 紙幣？' },
+            { id: 'scen_8', title: '慈善籌款箱', img: 'images/image_6.png', leftNote: 100, leftCount: 1, rightNote: 50, correctCount: 2, prompt: '打算捐 $20，但只有 1 張 $100。老師讓你自己拿回 $80。如果你拿了 2 張 $50，那是多少錢呢？' },
+            { id: 'scen_9', title: '兌換店的硬幣', img: 'images/image_7.png', leftNote: 100, leftCount: 1, rightNote: 10, correctCount: 10, prompt: '換成 $10 硬幣做活動。書記給了你一袋硬幣，你數了數發現有 11 個 $10。這是多少錢？換成 HK$10 硬幣後應該有多少個？' },
+            { id: 'scen_10', title: '便利店增值錯誤', img: 'images/image_8.png', leftNote: 100, leftCount: 1, rightNote: 20, correctCount: 5, prompt: '用 5 張 $20 為八達通增值，收據顯示增值了 $200。這是多少錢？換成 HK$20 紙幣後應該有多少張？' }
         ]
      };
 
@@ -291,7 +336,9 @@
       // 用於不同模式的內部狀態
       currentCount: 0, // 基本模式 (Fix)
       currentShownCount: 0, // 基本模式 Step 1
+      currentMixCounts: {}, // 混合紙幣逐種面額的張數
       isCorrectInStep1: false, // Step 1判斷用
+      valueChoicePassed: false,
       
       // 記錄第一次對錯與次數 (用於 Firebase)
       firstAttemptCorrects: [],
@@ -327,6 +374,7 @@
     function resetLoginUI() {
       state.class = null;
       document.getElementById('student-id-input').value = '';
+      document.getElementById('value-choice-controls').classList.add('hidden');
       const buttons = document.querySelectorAll('.class-btn');
       buttons.forEach(btn => btn.className = 'class-btn h-14 rounded-xl border-2 border-slate-300 bg-white font-number text-2xl font-black text-slate-700 hover:border-sky-400');
     }
@@ -419,7 +467,7 @@
       // 顯示 Currency Stage (預設)，隱藏 Scenario Stage
       document.getElementById('currency-stage').classList.remove('hidden');
       document.getElementById('scenario-stage').classList.add('hidden');
-      // 顯示 Step 1 Controls，隱藏其餘
+      document.getElementById('value-choice-controls').classList.add('hidden');
       document.getElementById('step1-controls').classList.remove('hidden');
       document.getElementById('step2-controls').classList.add('hidden');
       // 隱藏輔助顯示
@@ -433,10 +481,10 @@
     function loadBasicQuestion() {
       const q = state.currentQuestion;
       
-      // Step 1: 決定顯示的ShownCount是正確還是錯誤 (用於Gamification)
-      const shownCount = (Math.random() < 0.3) ? q.correctCount : q.shownIncorrectCount;
-      state.isCorrectInStep1 = (shownCount === q.correctCount);
-      state.currentShownCount = shownCount; // 用於Step 1判斷用
+      // 按固定題庫設定：第1、3題正確；第2、4、5題不正確。
+      const shownCount = q.isCorrect ? q.correctCount : q.shownIncorrectCount;
+      state.isCorrectInStep1 = q.isCorrect;
+      state.currentShownCount = shownCount;
       
       document.getElementById('rule-zone-badge').textContent = (q.zone === 'large' ? '🏦 大額互換區' : '📘 小額兌換區');
       document.getElementById('ai-prompt-text').textContent = q.prompt;
@@ -450,11 +498,13 @@
       renderExchangeNotes(q.rightNote, shownCount);
     }
 
-    // --- 混合題目載入 (目前只有單純判斷對錯) ---
+    // --- 混合題目載入：第6題正確；第7至9題不正確 ---
     function loadMixQuestion() {
       const q = state.currentQuestion;
-      state.isCorrectInStep1 = q.correct; // 混合兌換目前預設皆為正確
-      document.getElementById('rule-zone-badge').textContent = '📘 小額兌換區 (混合)';
+      state.isCorrectInStep1 = q.isCorrect;
+      state.currentMixCounts = {};
+      q.rightMix.forEach(item => { state.currentMixCounts[item.note] = item.count; });
+      document.getElementById('rule-zone-badge').textContent = '📘 小額兌換區 (混合紙幣)';
       document.getElementById('ai-prompt-text').textContent = q.prompt;
       renderLeftNotes(q.leftNote, q.leftCount);
       renderMixRightNotes(q.rightMix);
@@ -480,7 +530,43 @@
     // --- 視覺生成輔助函數 ( 同原本 ) ---
     function renderLeftNotes(note, count) { const leftContainer = document.getElementById('target-note-container'); if (count === 1) { leftContainer.innerHTML = createBanknoteHTML(note, true, 0, 1); } else { leftContainer.innerHTML = ''; for (let i = 0; i < count; i++) { leftContainer.innerHTML += createBanknoteHTML(note, true, i, count); } } }
     function renderExchangeNotes(note, count) { const grid = document.getElementById('exchange-notes-grid'); document.getElementById('current-count-badge').textContent = count; document.getElementById('adjust-count-display').textContent = count; if (count === 1) { grid.className = 'grid grid-cols-1 max-w-[240px] mx-auto gap-3'; } else if (count <= 4) { grid.className = 'grid grid-cols-2 gap-3'; } else if (count <= 6) { grid.className = 'grid grid-cols-3 gap-2.5'; } else { grid.className = 'grid grid-cols-4 gap-2'; } let html = ''; for (let i = 0; i < count; i++) { html += createBanknoteHTML(note, false, i); } grid.innerHTML = html; const currentTotal = count * note; document.getElementById('current-total-label').textContent = `$${currentTotal}`; }
-    function renderMixRightNotes(mixArray) { const grid = document.getElementById('exchange-notes-grid'); const totalNotes = mixArray.reduce((sum, item) => sum + item.count, 0); document.getElementById('current-count-badge').textContent = totalNotes; if (totalNotes <= 4) { grid.className = 'grid grid-cols-2 gap-3'; } else if (totalNotes <= 6) { grid.className = 'grid grid-cols-3 gap-2.5'; } else { grid.className = 'grid grid-cols-4 gap-2'; } let html = ''; let index = 0; mixArray.forEach(mixItem => { for(let i=0; i<mixItem.count; i++) { html += createBanknoteHTML(mixItem.note, false, index++); } }); grid.innerHTML = html; }
+    function renderMixRightNotes(mixArray) {
+      const grid = document.getElementById('exchange-notes-grid');
+      const q = state.currentQuestion;
+      const denominations = [...new Set([...mixArray.map(x => x.note), ...(q.correctMix || []).map(x => x.note)])].sort((a,b) => b-a);
+      grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 my-auto py-2';
+      let html = '';
+      denominations.forEach(note => {
+        const count = Number(state.currentMixCounts[note] || 0);
+        html += `
+          <div class="rounded-2xl border-2 border-emerald-200 bg-white p-3 flex flex-col gap-2">
+            <div class="flex items-center justify-center">${createBanknoteHTML(note, false, 0)}</div>
+            <div class="flex items-center justify-center gap-3">
+              <button type="button" aria-label="減少 ${note} 元紙幣" onclick="adjustMixNoteCount(${note},-1)" class="btn-3d w-12 h-12 rounded-xl bg-rose-500 text-white text-xl font-black shadow-[0_4px_0_#be123c]">−</button>
+              <div class="min-w-[74px] text-center">
+                <div class="font-number text-2xl font-black text-slate-800">${count} 張</div>
+                <div class="text-xs font-bold text-slate-500">$${note} 紙幣</div>
+              </div>
+              <button type="button" aria-label="增加 ${note} 元紙幣" onclick="adjustMixNoteCount(${note},1)" class="btn-3d w-12 h-12 rounded-xl bg-sky-500 text-white text-xl font-black shadow-[0_4px_0_#0369a1]">＋</button>
+            </div>
+          </div>`;
+      });
+      grid.innerHTML = html;
+      const totalNotes = denominations.reduce((sum, note) => sum + Number(state.currentMixCounts[note] || 0), 0);
+      const totalValue = denominations.reduce((sum, note) => sum + note * Number(state.currentMixCounts[note] || 0), 0);
+      document.getElementById('current-count-badge').textContent = totalNotes;
+      document.getElementById('current-total-label').textContent = `$${totalValue}`;
+      document.getElementById('right-sum-pill').classList.remove('hidden');
+      document.getElementById('adjust-count-display').textContent = totalNotes;
+    }
+
+    function adjustMixNoteCount(denomination, delta) {
+      const next = Number(state.currentMixCounts[denomination] || 0) + delta;
+      if (next < 0 || next > 20) return;
+      state.currentMixCounts[denomination] = next;
+      playTone('click');
+      renderMixRightNotes(state.currentQuestion.rightMix);
+    }
 
     /**
      * =========================================================================
@@ -520,11 +606,11 @@
             document.getElementById('step2-instruction').textContent = `答對了！題目顯示 ${state.currentShownCount} 張是不正確的。請修正到正確張數！`;
             state.currentCount = state.currentShownCount; // 從Step 1的shownCount開始修正
             renderExchangeNotes(q.rightNote, state.currentCount);
-          } else if (state.questionNumber === 10) {
-            // 情境模式：進入 Input 張數 (顯示輸入框)
+          } else if (state.questionNumber >= 6 && state.questionNumber <= 9) {
             document.getElementById('step2-fix-inputs').classList.add('hidden');
-            document.getElementById('step2-scenario-inputs').classList.remove('hidden');
-            document.getElementById('step2-instruction').textContent = `答對了！退回那張錢是不對的。請問應該退回多少張 ${q.rightNote} 才對？`;
+            document.getElementById('step2-scenario-inputs').classList.add('hidden');
+            document.getElementById('step2-instruction').textContent = '答對了！請逐種紙幣按「＋／−」，把每種紙幣的張數修正，令總額相等。';
+            renderMixRightNotes(q.rightMix);
           }
         }
       } else {
@@ -534,6 +620,34 @@
         gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
         showFeedbackBanner('warning', '差一點點！繼續加油！💪', `再想一想，應該退回幾張 $${q.rightNote} 呢？`);
       }
+    }
+
+    // --- 第10題價值教育三選一：選對後才可進行貨幣兌換 ---
+    function handleValueChoice(choiceIndex) {
+      playTone('click');
+      state.currentQuestionAttempts += 1;
+      state.totalAttempts += 1;
+      if (choiceIndex !== 0) {
+        playTone('tryAgain');
+        showFeedbackBanner('warning', '再想一想！', '正確做法是誠實處理，立即通知店員，並交還不屬於自己的金錢。請再選一次。', false);
+        return;
+      }
+      state.valueChoicePassed = true;
+      state.firstAttemptCorrects.push(state.currentQuestionAttempts === 1);
+      document.getElementById('value-choice-controls').classList.add('hidden');
+      document.getElementById('currency-stage').classList.remove('hidden');
+      document.getElementById('step2-controls').classList.remove('hidden');
+      document.getElementById('step2-fix-inputs').classList.add('hidden');
+      document.getElementById('step2-scenario-inputs').classList.remove('hidden');
+      document.getElementById('step2-scenario-inputs').classList.add('flex');
+      document.getElementById('step2-instruction').textContent = '做得好！現在進行貨幣兌換：請計算相等的紙幣張數。';
+      document.getElementById('scenario-answer-input').value = '';
+      document.getElementById('target-total-label').textContent = `$${state.currentQuestion.leftNote * state.currentQuestion.leftCount}`;
+      document.getElementById('current-count-badge').textContent = '待計算';
+      document.getElementById('current-total-label').textContent = '請計算';
+      document.getElementById('exchange-notes-grid').innerHTML = `<div class="col-span-full text-center text-lg font-black text-emerald-800 bg-white rounded-xl p-5">請計算：$${state.currentQuestion.leftNote} ÷ $${state.currentQuestion.rightNote} = ? 張</div>`;
+      showFeedbackBanner('success', '價值判斷正確！', '你選擇了誠實、守法的做法。現在進入貨幣兌換。', false);
+      updateStepIndicator();
     }
 
     // --- STEP 2 (Fix模式): 調整張數 ---
@@ -547,33 +661,48 @@
 
     // --- STEP 2: 驗證答案 (Fix模式或Input模式) ---
     function verifyStep2Answer() {
+      if (state.questionNumber === 10 && !state.valueChoicePassed) return;
       playTone('click');
       state.currentQuestionAttempts += 1;
       state.totalAttempts += 1;
       const q = state.currentQuestion;
       let userAns;
 
+      let isAnswerCorrect = false;
       if (state.questionNumber <= 5) {
-        // Fix 模式
         userAns = state.currentCount;
+        isAnswerCorrect = (userAns === q.correctCount);
+      } else if (state.questionNumber <= 9) {
+        isAnswerCorrect = (q.correctMix || []).every(item =>
+          Number(state.currentMixCounts[item.note] || 0) === item.count
+        ) && Object.keys(state.currentMixCounts).every(note => {
+          const expected = (q.correctMix || []).find(item => item.note === Number(note));
+          return Number(state.currentMixCounts[note] || 0) === (expected ? expected.count : 0);
+        });
       } else if (state.questionNumber === 10) {
-        // Input 模式
-        userAns = parseInt(document.getElementById('scenario-answer-input').value);
+        userAns = parseInt(document.getElementById('scenario-answer-input').value, 10);
+        isAnswerCorrect = Number.isFinite(userAns) && userAns === q.correctCount;
       }
 
-      if (userAns === q.correctCount) {
+      if (isAnswerCorrect) {
         completeQuestionSuccess();
       } else {
         playTone('tryAgain');
         const gameCard = document.getElementById('game-card');
         gameCard.classList.remove('animate-shake'); void gameCard.offsetWidth; gameCard.classList.add('animate-shake');
-        showFeedbackBanner('warning', '填寫錯誤！', `再想一想，應該退回幾張 $${q.rightNote} 呢？`);
+        const hint = state.questionNumber <= 5
+          ? `再想一想，$${q.leftNote} 應該兌換成多少張 $${q.rightNote} 紙幣？`
+          : state.questionNumber <= 9
+            ? '請再檢查每一種面額的紙幣張數，以及加起來的總額。'
+            : `再計算一次：$${q.leftNote} ÷ $${q.rightNote} 等於多少張？`;
+        showFeedbackBanner('warning', '答案未正確！', hint);
       }
     }
 
     // --- 完成題目與實時記錄 (gamification + Firebase) ---
     function completeQuestionSuccess() {
       playTone('success');
+      launchConfetti();
       state.step = 3;
       updateStepIndicator();
       state.endTime = Date.now(); // 實時更新完成時間
@@ -595,7 +724,7 @@
       let detail = ``;
       if (state.questionNumber <= 5) { detail = `${q.correctCount} 張 $${q.rightNote} 紙幣加起來剛好等於題目金額，這個兌換是正確的！`; } 
       else if (state.questionNumber <= 9) { detail = `沒錯，這組混合紙幣加起來剛好相等，你做得很好！`; } 
-      else if (state.questionNumber === 10) { detail = `太棒了！你的誠實守法表現，比起答對數學題更難能可貴！（價值教育:守法）`; launchConfetti(); }
+      else if (state.questionNumber === 10) { detail = `太棒了！你能誠實守法，也成功完成貨幣兌換！（價值教育：守法）`; }
 
       // --- 實時記錄 Firebase 資料 ---
       logDataToFirebase();
